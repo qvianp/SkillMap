@@ -1,0 +1,118 @@
+{% extends "base.html" %}
+{% from "_macros.html" import password_toggle %}
+{% block title %}{{ t('auth.register_title') }}{% endblock %}
+
+{% block public_content %}
+<div class="auth-page">
+  <div class="auth-card" style="max-width: 500px;">
+    <h1 style="font-size: 1.5rem;">{{ t('auth.register_heading') }}</h1>
+    <p style="margin-top: 6px; color: var(--text-secondary); font-size: 0.9rem;">
+      {{ t('auth.register_sub') }}
+    </p>
+
+    <form action="{{ url_for('auth.register') }}" method="POST" class="stack-md" style="margin-top: 22px;">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+
+      <div class="form-group">
+        <label for="reg-name" class="form-label">{{ t('auth.full_name_label') }}</label>
+        <input
+          id="reg-name"
+          name="full_name"
+          type="text"
+          class="form-control"
+          required
+          minlength="2"
+          maxlength="80"
+          value="{{ form_data.full_name }}"
+          placeholder="{{ t('auth.full_name_placeholder') }}"
+        />
+      </div>
+
+      <div class="form-group">
+        <label for="reg-email" class="form-label">{{ t('auth.email_label') }}</label>
+        <input
+          id="reg-email"
+          name="email"
+          type="email"
+          class="form-control"
+          required
+          autocomplete="email"
+          value="{{ form_data.email }}"
+          placeholder="{{ t('auth.reg_email_placeholder') }}"
+        />
+      </div>
+
+      <div class="form-grid">
+        <div class="form-group">
+          <label for="reg-password" class="form-label">{{ t('auth.password_label') }}</label>
+          <div class="password-field">
+            <input
+              id="reg-password"
+              name="password"
+              type="password"
+              class="form-control password-input"
+              required
+              minlength="8"
+              autocomplete="new-password"
+              placeholder="{{ t('auth.reg_password_placeholder') }}"
+            />
+            {{ password_toggle('reg-password', t('auth.show_password')) }}
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label for="reg-confirm" class="form-label">{{ t('auth.confirm_password_label') }}</label>
+          <div class="password-field">
+            <input
+              id="reg-confirm"
+              name="confirm_password"
+              type="password"
+              class="form-control password-input"
+              required
+              minlength="8"
+              autocomplete="new-password"
+              placeholder="{{ t('auth.confirm_password_placeholder') }}"
+            />
+            {{ password_toggle('reg-confirm', t('auth.show_password')) }}
+          </div>
+        </div>
+      </div>
+
+      <div class="form-grid">
+        <div class="form-group">
+          <label for="reg-career" class="form-label">{{ t('auth.target_career_label') }}</label>
+          <select id="reg-career" name="target_career_id" class="form-control">
+            <option value="">{{ t('auth.choose_later') }}</option>
+            {% for career in careers %}
+              <option value="{{ career.id }}" {% if form_data.target_career_id == career.id|string %}selected{% endif %}>
+                {{ t_career_field(career.slug, 'title', career.title) }}
+              </option>
+            {% endfor %}
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label for="reg-hours" class="form-label">{{ t('auth.weekly_goal_label') }}</label>
+          <input
+            id="reg-hours"
+            name="weekly_goal_hours"
+            type="number"
+            min="1"
+            max="100"
+            step="0.5"
+            class="form-control"
+            value="{{ form_data.weekly_goal_hours }}"
+          />
+        </div>
+      </div>
+
+      <button type="submit" class="btn btn-primary" style="width: 100%;">{{ t('nav.create_account') }}</button>
+    </form>
+
+    <p style="margin-top: 18px; text-align: center; font-size: 0.875rem; color: var(--text-secondary);">
+      {{ t('auth.already_registered') }}
+      <a href="{{ url_for('auth.login') }}" style="color: var(--accent-indigo); font-weight: 600;">{{ t('auth.sign_in_link') }}</a>
+    </p>
+  </div>
+</div>
+{% endblock %}

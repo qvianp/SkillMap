@@ -1,0 +1,301 @@
+{% extends "base.html" %}
+{% from "_macros.html" import career_icon %}
+{% block title %}{{ t('resources.title') }}{% endblock %}
+{% block page_breadcrumb %}{{ t('bc.resources') }}{% endblock %}
+
+{% block topbar_action %}
+  <a href="{{ url_for('careers.index') }}" class="btn btn-sm btn-secondary">{{ t('resources.discover_curated') }}</a>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <div>
+    <h1 class="page-title">{{ t('resources.heading') }}</h1>
+    <p class="page-subtitle">{{ t('resources.sub') }}</p>
+  </div>
+  <div class="meta-line">
+    <span class="font-mono">{{ t('resources.completed_counter', done=counts.completed, total=counts.total) }}</span>
+  </div>
+</div>
+
+<section class="grid-dashboard-main" style="margin-bottom: 24px;">
+  <!-- Personal Resource Table + Filter Toolbar -->
+  <div class="surface-card-flush">
+    <div style="padding: 18px 20px; border-bottom: 1px solid var(--border-hairline);">
+      <form action="{{ url_for('resources.index') }}" method="GET" class="toolbar" style="margin-bottom: 0;">
+        <div class="toolbar-filters">
+          <input
+            type="search"
+            name="q"
+            class="form-control search-input"
+            value="{{ filters.q }}"
+            placeholder="{{ t('resources.search_placeholder') }}"
+            aria-label="{{ t('resources.search_aria') }}"
+          />
+          <select name="category" class="form-control" style="width: auto;" aria-label="{{ t('resources.filter_cat_aria') }}">
+            <option value="">{{ t('resources.all_categories') }}</option>
+            {% for cat in categories %}
+              <option value="{{ cat }}" {% if filters.category == cat %}selected{% endif %}>{{ t_enum('category', cat) }}</option>
+            {% endfor %}
+          </select>
+          <select name="difficulty" class="form-control" style="width: auto;" aria-label="{{ t('resources.filter_diff_aria') }}">
+            <option value="">{{ t('resources.all_levels') }}</option>
+            {% for diff in difficulties %}
+              <option value="{{ diff }}" {% if filters.difficulty == diff %}selected{% endif %}>{{ t_enum('level', diff) }}</option>
+            {% endfor %}
+          </select>
+          <select name="status" class="form-control" style="width: auto;" aria-label="{{ t('resources.filter_status_aria') }}">
+            <option value="all" {% if filters.status == 'all' %}selected{% endif %}>{{ t('resources.all_status') }}</option>
+            <option value="unread" {% if filters.status == 'unread' %}selected{% endif %}>{{ t('resources.unread') }}</option>
+            <option value="completed" {% if filters.status == 'completed' %}selected{% endif %}>{{ t('resources.completed') }}</option>
+          </select>
+        </div>
+        <div style="display: flex; gap: 8px;">
+          <button type="submit" class="btn btn-secondary btn-sm">{{ t('common.apply') }}</button>
+          {% if filters.q or filters.category or filters.difficulty or filters.status != 'all' %}
+            <a href="{{ url_for('resources.index') }}" class="btn btn-ghost btn-sm">{{ t('common.reset') }}</a>
+          {% endif %}
+        </div>
+      </form>
+    </div>
+
+    {% if resources %}
+      <div class="data-table-wrap">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>{{ t('resources.col_resource') }}</th>
+              <th>{{ t('resources.col_cat_level') }}</th>
+              <th>{{ t('resources.col_status') }}</th>
+              <th class="text-right">{{ t('resources.col_actions') }}</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for res in resources %}
+              {% set res_title = t_resource_title(res.title) %}
+              {% set res_desc = t_resource_desc(res.title, res.description or '') %}
+              <tr>
+                <td>
+                  <a href="{{ res.url }}" target="_blank" rel="noopener noreferrer" style="font-weight: 600; color: var(--accent-indigo);">
+                    {{ res_title }} {{ t('common.arrow_external') }}
+                  </a>
+                  {% if res_desc %}
+                    <div style="font-size: 0.8125rem; color: var(--text-secondary); margin-top: 2px;">{{ res_desc }}</div>
+                  {% endif %}
+                  {% if res.career_title %}
+                    <div class="meta-line {% if res.career_slug %}career-theme--{{ res.career_slug }}{% endif %}" style="margin-top: 4px;">
+                      <span class="career-dot" aria-hidden="true"></span>
+                      <span class="career-ink-text">{{ t_career_field(res.career_slug, 'title', res.career_title) }}</span>
+                    </div>
+                  {% endif %}
+                </td>
+                <td>
+                  <div style="font-weight: 500;">{{ t_enum('category', res.category) }}</div>
+                  <div class="level-text--{{ res.difficulty }}" style="font-size: 0.8125rem;">{{ t_enum('level', res.difficulty) }}</div>
+                </td>
+                <td>
+                  <span data-resource-status class="status-label {% if res.is_completed %}success{% else %}muted{% endif %}">
+                    {% if res.is_completed %}{{ t('resources.completed') }}{% else %}{{ t('resources.unread') }}{% endif %}
+                  </span>
+                </td>
+                <td class="text-right">
+                  <div style="display: inline-flex; gap: 6px; flex-wrap: wrap; justify-content: flex-end;">
+                    <form action="{{ url_for('resources.toggle_resource', resource_id=res.id) }}" method="POST">
+                      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+                      <button type="submit" class="btn btn-secondary btn-sm" data-ajax-resource-toggle="{{ res.id }}">
+                        {% if res.is_completed %}{{ t('resources.reopen') }}{% else %}{{ t('resources.mark_complete') }}{% endif %}
+                      </button>
+                    </form>
+                    <button
+                      type="button"
+                      class="btn btn-secondary btn-sm"
+                      data-edit-resource
+                      data-id="{{ res.id }}"
+                      data-title="{{ res_title }}"
+                      data-url="{{ res.url }}"
+                      data-category="{{ res.category }}"
+                      data-difficulty="{{ res.difficulty }}"
+                      data-career-id="{{ res.career_path_id or '' }}"
+                      data-desc="{{ res_desc }}"
+                    >
+                      {{ t('common.edit') }}
+                    </button>
+                    <form
+                      action="{{ url_for('resources.delete_resource', resource_id=res.id) }}"
+                      method="POST"
+                      data-confirm="{{ t('resources.confirm_delete', title=res_title) }}"
+                    >
+                      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+                      <button type="submit" class="btn btn-ghost btn-sm" style="color: var(--status-danger);">{{ t('common.delete') }}</button>
+                    </form>
+                  </div>
+                </td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    {% else %}
+      <div class="empty-state">
+        <div class="empty-state-title">{{ t('resources.empty_title') }}</div>
+        <p class="empty-state-desc">{{ t('resources.empty_desc') }}</p>
+      </div>
+    {% endif %}
+  </div>
+
+  <!-- Add Resource Form -->
+  <div class="stack-lg">
+    <section class="surface-card">
+      <div class="card-header">
+        <h2 class="card-title">{{ t('resources.add_card') }}</h2>
+      </div>
+      <form action="{{ url_for('resources.add_resource') }}" method="POST" class="stack-md">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+
+        <div class="form-group">
+          <label for="res-title" class="form-label">{{ t('resources.field_title') }}</label>
+          <input id="res-title" name="title" type="text" class="form-control" required minlength="2" maxlength="140" placeholder="{{ t('resources.title_placeholder') }}" />
+        </div>
+
+        <div class="form-group">
+          <label for="res-url" class="form-label">{{ t('resources.field_url') }}</label>
+          <input id="res-url" name="url" type="url" class="form-control" required placeholder="{{ t('resources.url_placeholder') }}" />
+        </div>
+
+        <div class="form-grid">
+          <div class="form-group">
+            <label for="res-cat" class="form-label">{{ t('resources.field_category') }}</label>
+            <select id="res-cat" name="category" class="form-control">
+              {% for cat in categories %}
+                <option value="{{ cat }}">{{ t_enum('category', cat) }}</option>
+              {% endfor %}
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label for="res-diff" class="form-label">{{ t('resources.field_difficulty') }}</label>
+            <select id="res-diff" name="difficulty" class="form-control">
+              {% for diff in difficulties %}
+                <option value="{{ diff }}">{{ t_enum('level', diff) }}</option>
+              {% endfor %}
+            </select>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label for="res-career" class="form-label">{{ t('resources.field_career_opt') }}</label>
+          <select id="res-career" name="career_path_id" class="form-control">
+            <option value="">{{ t('common.general') }}</option>
+            {% for c in careers %}
+              <option value="{{ c.id }}">{{ t_career_field(c.slug, 'title', c.title) }}</option>
+            {% endfor %}
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label for="res-desc" class="form-label">{{ t('resources.field_desc') }}</label>
+          <textarea id="res-desc" name="description" class="form-control" placeholder="{{ t('resources.desc_placeholder') }}"></textarea>
+        </div>
+
+        <button type="submit" class="btn btn-primary">{{ t('resources.add_btn') }}</button>
+      </form>
+    </section>
+  </div>
+</section>
+
+<!-- Quick-Bookmark Curated Catalog -->
+<section class="surface-card">
+  <div class="card-header">
+    <h2 class="card-title">{{ t('resources.curated_heading') }}</h2>
+    <a href="{{ url_for('careers.index') }}" class="btn btn-ghost btn-sm">{{ t('resources.explore_paths') }}</a>
+  </div>
+  {% if curated %}
+    <div class="grid-4">
+      {% for item in curated %}
+        <div class="surface-card career-card {% if item.career_slug %}career-theme--{{ item.career_slug }}{% endif %}" style="padding: 16px; display: flex; flex-direction: column; justify-content: space-between; gap: 12px;">
+          <div>
+            <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 10px;">
+              {% if item.career_slug %}
+                <span class="career-emblem" style="width: 32px; height: 32px; border-radius: 8px;" aria-hidden="true">{{ career_icon(item.career_slug, 16) }}</span>
+              {% endif %}
+              <span class="career-ink-text" style="font-size: 0.8125rem; line-height: 1.25;">{{ t_career_field(item.career_slug, 'title', item.career_title) }}</span>
+            </div>
+            <div class="meta-line" style="margin-bottom: 6px;">
+              <span>{{ t_enum('category', item.category) }}</span>
+              <span aria-hidden="true">&middot;</span>
+              <span class="level-text--{{ item.difficulty }}">{{ t_enum('level', item.difficulty) }}</span>
+            </div>
+            <a href="{{ item.url }}" target="_blank" rel="noopener noreferrer" style="font-weight: 600; font-size: 0.925rem; color: var(--text-primary); display: block; line-height: 1.35;">
+              {{ t_resource_title(item.title) }}
+            </a>
+          </div>
+          <form action="{{ url_for('resources.save_curated', resource_id=item.id) }}" method="POST">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+            <button type="submit" class="btn btn-secondary btn-sm" style="width: 100%;">{{ t('resources.save_to_library') }}</button>
+          </form>
+        </div>
+      {% endfor %}
+    </div>
+  {% else %}
+    <p style="font-size: 0.875rem; color: var(--text-secondary);">
+      {{ t('resources.all_saved_note') }}
+    </p>
+  {% endif %}
+</section>
+
+<!-- Edit Resource Modal -->
+<div class="modal-overlay" id="edit-resource-modal" role="dialog" aria-modal="true" aria-labelledby="edit-res-heading">
+  <div class="modal-dialog" style="max-width: 540px;">
+    <div class="card-header">
+      <h2 id="edit-res-heading" class="card-title">{{ t('resources.edit_modal_title') }}</h2>
+      <button type="button" class="alert-dismiss" data-close-modal aria-label="{{ t('common.close_modal') }}">&times;</button>
+    </div>
+    <form id="edit-resource-form" method="POST" class="stack-md">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+      <div class="form-group">
+        <label for="edit-res-title" class="form-label">{{ t('resources.field_title') }}</label>
+        <input id="edit-res-title" name="title" type="text" class="form-control" required minlength="2" maxlength="140" />
+      </div>
+      <div class="form-group">
+        <label for="edit-res-url" class="form-label">{{ t('resources.field_url') }}</label>
+        <input id="edit-res-url" name="url" type="url" class="form-control" required />
+      </div>
+      <div class="form-grid">
+        <div class="form-group">
+          <label for="edit-res-cat" class="form-label">{{ t('resources.field_category') }}</label>
+          <select id="edit-res-cat" name="category" class="form-control">
+            {% for cat in categories %}
+              <option value="{{ cat }}">{{ t_enum('category', cat) }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div class="form-group">
+          <label for="edit-res-diff" class="form-label">{{ t('resources.field_difficulty') }}</label>
+          <select id="edit-res-diff" name="difficulty" class="form-control">
+            {% for diff in difficulties %}
+              <option value="{{ diff }}">{{ t_enum('level', diff) }}</option>
+            {% endfor %}
+          </select>
+        </div>
+      </div>
+      <div class="form-group">
+        <label for="edit-res-career" class="form-label">{{ t('resources.field_career_opt') }}</label>
+        <select id="edit-res-career" name="career_path_id" class="form-control">
+          <option value="">{{ t('common.general') }}</option>
+          {% for c in careers %}
+            <option value="{{ c.id }}">{{ t_career_field(c.slug, 'title', c.title) }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="form-group">
+        <label for="edit-res-desc" class="form-label">{{ t('resources.field_desc') }}</label>
+        <textarea id="edit-res-desc" name="description" class="form-control"></textarea>
+      </div>
+      <div style="display: flex; justify-content: flex-end; gap: 10px;">
+        <button type="button" class="btn btn-secondary btn-sm" data-close-modal>{{ t('common.cancel') }}</button>
+        <button type="submit" class="btn btn-primary btn-sm">{{ t('common.save_changes') }}</button>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}

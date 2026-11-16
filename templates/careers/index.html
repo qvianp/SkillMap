@@ -1,0 +1,94 @@
+{% extends "base.html" %}
+{% from "_macros.html" import career_icon %}
+{% block title %}{{ t('careers.title') }}{% endblock %}
+{% block page_breadcrumb %}{{ t('bc.careers') }}{% endblock %}
+
+{% block topbar_action %}
+  <a href="{{ url_for('roadmap.index') }}" class="btn btn-sm btn-secondary">{{ t('nav.my_roadmap') }}</a>
+{% endblock %}
+
+{% macro explorer_body() %}
+<div class="page-header">
+  <div>
+    <h1 class="page-title">{{ t('careers.heading') }}</h1>
+    <p class="page-subtitle">{{ t('careers.sub') }}</p>
+  </div>
+
+  <form action="{{ url_for('careers.index') }}" method="GET" style="display: flex; gap: 8px; align-items: center;">
+    <input
+      type="search"
+      name="q"
+      class="form-control search-input"
+      value="{{ search }}"
+      placeholder="{{ t('careers.search_placeholder') }}"
+      aria-label="{{ t('careers.search_aria') }}"
+    />
+    <button type="submit" class="btn btn-secondary btn-sm">{{ t('common.search') }}</button>
+    {% if search %}
+      <a href="{{ url_for('careers.index') }}" class="btn btn-ghost btn-sm">{{ t('common.reset') }}</a>
+    {% endif %}
+  </form>
+</div>
+
+{% if careers %}
+  <div class="grid-3">
+    {% for career in careers %}
+      <article class="surface-card career-card career-theme--{{ career.slug }}" style="display: flex; flex-direction: column; justify-content: space-between; gap: 18px;">
+        <div>
+          <div style="display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 12px;">
+            <span class="career-emblem">{{ career_icon(career.slug) }}</span>
+            <div class="meta-line">
+              <span class="tabular-nums">{{ t('common.skills_count', count=career.skill_count) }}</span>
+              <span aria-hidden="true">&middot;</span>
+              <span class="tabular-nums">{{ career.estimated_hours }} {{ t('common.hours_short') }}</span>
+              <span aria-hidden="true">&middot;</span>
+              <span class="tabular-nums">{{ career.estimated_months }} {{ t('common.months_short') }}</span>
+              {% if career.id in enrolled_ids %}
+                <span aria-hidden="true">&middot;</span>
+                <span class="status-label success">{{ t('common.enrolled') }}</span>
+              {% endif %}
+            </div>
+          </div>
+
+          <h2 style="font-size: 1.125rem;">{{ t_career_field(career.slug, 'title', career.title) }}</h2>
+          <p style="margin-top: 8px; font-size: 0.875rem; color: var(--text-secondary);">
+            {{ t_career_field(career.slug, 'description', career.description) }}
+          </p>
+
+          <div class="meta-line" style="margin-top: 12px;">
+            <span class="career-ink-text">{{ t('common.projects_count', count=career.project_count) }}</span>
+            <span aria-hidden="true">&middot;</span>
+            <span>{{ t('common.resources_count', count=career.resource_count) }}</span>
+          </div>
+        </div>
+
+        <div style="display: flex; align-items: center; gap: 10px; padding-top: 12px; border-top: 1px solid var(--border-hairline);">
+          <a href="{{ url_for('careers.detail', slug=career.slug) }}" class="btn btn-secondary btn-sm">{{ t('careers.view_details') }}</a>
+          {% if current_user %}
+            <form action="{{ url_for('careers.enroll', slug=career.slug) }}" method="POST" style="display: inline;">
+              <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+              <button type="submit" class="btn btn-primary btn-sm">
+                {% if career.id in enrolled_ids %}{{ t('careers.open_roadmap') }}{% else %}{{ t('careers.start_roadmap') }}{% endif %}
+              </button>
+            </form>
+          {% endif %}
+        </div>
+      </article>
+    {% endfor %}
+  </div>
+{% else %}
+  <div class="surface-card empty-state">
+    <div class="empty-state-title">{{ t('careers.empty_title', query=search) }}</div>
+    <p class="empty-state-desc">{{ t('careers.empty_desc') }}</p>
+    <a href="{{ url_for('careers.index') }}" class="btn btn-secondary btn-sm">{{ t('careers.show_all') }}</a>
+  </div>
+{% endif %}
+{% endmacro %}
+
+{% block content %}
+  {{ explorer_body() }}
+{% endblock %}
+
+{% block public_content %}
+  {{ explorer_body() }}
+{% endblock %}

@@ -1,0 +1,241 @@
+{% extends "base.html" %}
+{% from "_macros.html" import career_icon %}
+{% block title %}{{ t('assess.title') }}{% endblock %}
+{% block page_breadcrumb %}{{ t('bc.assessments') }}{% endblock %}
+
+{% block topbar_action %}
+  <a href="{{ url_for('hub.notes_index') }}" class="btn btn-sm btn-secondary">{{ t('nav.study_notes') }}</a>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <div>
+    <h1 class="page-title">{{ t('assess.heading') }}</h1>
+    <p class="page-subtitle">{{ t('assess.sub') }}</p>
+  </div>
+</div>
+
+<!-- Summary Metrics -->
+<section class="grid-3" style="margin-bottom: 24px;">
+  <div class="kpi-card kpi-purple">
+    <div class="kpi-head">
+      <span class="kpi-label">{{ t('assess.kpi_completed') }}</span>
+      <span class="kpi-icon" aria-hidden="true">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
+      </span>
+    </div>
+    <span class="kpi-value">{{ summary.total }}</span>
+  </div>
+  <div class="kpi-card kpi-turquoise">
+    <div class="kpi-head">
+      <span class="kpi-label">{{ t('assess.kpi_avg') }}</span>
+      <span class="kpi-icon" aria-hidden="true">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+      </span>
+    </div>
+    <span class="kpi-value">{% if summary.total > 0 %}{{ summary.avg_score }}%{% else %}&mdash;{% endif %}</span>
+  </div>
+  <div class="kpi-card kpi-coral">
+    <div class="kpi-head">
+      <span class="kpi-label">{{ t('assess.kpi_flagged') }}</span>
+      <span class="kpi-icon" aria-hidden="true">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+      </span>
+    </div>
+    <span class="kpi-value">{{ summary.needs_practice_count }}</span>
+  </div>
+</section>
+
+<!-- Interactive Career Competency Quizzes -->
+<section class="surface-card" style="margin-bottom: 24px;">
+  <div class="card-header">
+    <div>
+      <h2 class="card-title">{{ t('assess.quizzes_heading') }}</h2>
+      <p style="font-size: 0.875rem; color: var(--text-secondary); margin-top: 2px;">
+        {{ t('assess.quizzes_sub') }}
+      </p>
+    </div>
+  </div>
+  <div class="grid-3">
+    {% for career in careers %}
+      <div class="surface-card career-card career-theme--{{ career.slug }}" style="padding: 18px; display: flex; flex-direction: column; justify-content: space-between; gap: 14px;">
+        <div>
+          <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 8px;">
+            <span class="career-emblem" aria-hidden="true">{{ career_icon(career.slug, 18) }}</span>
+            <div>
+              <div class="meta-line">
+                <span class="career-ink-text tabular-nums">{{ t('common.questions_count', count=career.question_count) }}</span>
+                <span aria-hidden="true">&middot;</span>
+                <span>{{ t('common.graded') }}</span>
+              </div>
+              <h3 style="font-size: 1rem; margin-top: 2px;">{{ t_career_field(career.slug, 'title', career.title) }}</h3>
+            </div>
+          </div>
+        </div>
+        <a href="{{ url_for('hub.take_quiz', slug=career.slug) }}" class="btn btn-primary btn-sm">{{ t('assess.start_quiz') }}</a>
+      </div>
+    {% endfor %}
+  </div>
+</section>
+
+<section class="grid-dashboard-main">
+  <!-- Assessment History & Weak Skills -->
+  <div class="stack-lg">
+    {% if weak_skills %}
+      <div class="surface-card">
+        <div class="card-header">
+          <h2 class="card-title" style="color: var(--status-warning);">{{ t('assess.weak_heading') }}</h2>
+        </div>
+        <div class="stack-sm">
+          {% for item in weak_skills %}
+            <div class="list-row {% if item.career_slug %}career-theme--{{ item.career_slug }}{% endif %}">
+              <div>
+                <strong style="font-size: 0.9375rem;">{{ t_skill_name(item.skill_name) if item.skill_name else t_assessment_title(item.title) }}</strong>
+                <div class="meta-line">
+                  <span class="career-dot" aria-hidden="true"></span>
+                  <span class="career-ink-text">{{ t_career_field(item.career_slug, 'title', item.career_title) }}</span>
+                  {% if item.feedback %}
+                    <span aria-hidden="true">&middot;</span>
+                    <span>{{ t_assessment_feedback(item.feedback) }}</span>
+                  {% endif %}
+                </div>
+              </div>
+              <div style="display: flex; align-items: center; gap: 10px;">
+                <span class="font-mono" style="font-weight: 700; color: var(--status-warning);">{{ item.score }}%</span>
+                <a href="{{ url_for('hub.take_quiz', slug=item.career_slug) }}" class="btn btn-secondary btn-sm">{{ t('assess.retake') }}</a>
+              </div>
+            </div>
+          {% endfor %}
+        </div>
+      </div>
+    {% endif %}
+
+    <div class="surface-card-flush">
+      <div style="padding: 18px 20px; border-bottom: 1px solid var(--border-hairline);">
+        <h2 class="card-title">{{ t('assess.history_heading') }}</h2>
+      </div>
+      {% if assessments %}
+        <div class="data-table-wrap">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>{{ t('assess.col_assessment') }}</th>
+                <th>{{ t('assess.col_type') }}</th>
+                <th>{{ t('assess.col_score') }}</th>
+                <th>{{ t('assess.col_eval') }}</th>
+                <th class="text-right">{{ t('assess.col_action') }}</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for a in assessments %}
+                {% set assess_title = t_assessment_title(a.title) %}
+                <tr>
+                  <td>
+                    <div style="font-weight: 600;">{{ assess_title }}</div>
+                    <div class="meta-line {% if a.career_slug %}career-theme--{{ a.career_slug }}{% endif %}">
+                      <span class="career-dot" aria-hidden="true"></span>
+                      <span class="career-ink-text">{{ t_career_field(a.career_slug, 'title', a.career_title) }}</span>
+                      {% if a.skill_name %}
+                        <span aria-hidden="true">&middot;</span>
+                        <span>{{ t_skill_name(a.skill_name) }}</span>
+                      {% endif %}
+                      {% if a.taken_at %}
+                        <span aria-hidden="true">&middot;</span>
+                        <span class="tabular-nums">{{ a.taken_at|format_datetime }}</span>
+                      {% endif %}
+                    </div>
+                  </td>
+                  <td>{{ t_enum('assessment_type', a.assessment_type) }}</td>
+                  <td class="font-mono" style="font-weight: 600;">{{ a.score }}%</td>
+                  <td>
+                    {% if a.needs_practice %}
+                      <span class="status-label warning">{{ t('assess.needs_practice') }}</span>
+                    {% else %}
+                      <span class="status-label success">{{ t('assess.proficient') }}</span>
+                    {% endif %}
+                    {% if a.feedback %}
+                      <div style="font-size: 0.8125rem; color: var(--text-secondary); margin-top: 2px;">{{ t_assessment_feedback(a.feedback) }}</div>
+                    {% endif %}
+                  </td>
+                  <td class="text-right">
+                    <form
+                      action="{{ url_for('hub.delete_assessment', assessment_id=a.id) }}"
+                      method="POST"
+                      data-confirm="{{ t('assess.confirm_delete', title=assess_title) }}"
+                    >
+                      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+                      <button type="submit" class="btn btn-ghost btn-sm" style="color: var(--status-danger);">{{ t('common.delete') }}</button>
+                    </form>
+                  </td>
+                </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      {% else %}
+        <div class="empty-state">
+          <div class="empty-state-title">{{ t('assess.empty_title') }}</div>
+          <p class="empty-state-desc">{{ t('assess.empty_desc') }}</p>
+        </div>
+      {% endif %}
+    </div>
+  </div>
+
+  <!-- Log Custom Self-Evaluation / Practical Assessment -->
+  <div class="surface-card" style="height: fit-content;">
+    <div class="card-header">
+      <h2 class="card-title">{{ t('assess.log_card') }}</h2>
+    </div>
+    <form action="{{ url_for('hub.add_assessment') }}" method="POST" class="stack-md">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+
+      <div class="form-group">
+        <label for="eval-career" class="form-label">{{ t('notes.field_career') }}</label>
+        <select id="eval-career" name="career_path_id" class="form-control" required data-career-select="eval-skill">
+          {% for c in careers %}
+            <option value="{{ c.id }}">{{ t_career_field(c.slug, 'title', c.title) }}</option>
+          {% endfor %}
+        </select>
+      </div>
+
+      <div class="form-group">
+        <label for="eval-skill" class="form-label">{{ t('assess.target_skill') }}</label>
+        <select id="eval-skill" name="skill_id" class="form-control">
+          <option value="">{{ t('assess.general_eval') }}</option>
+          {% for sk in skills %}
+            <option value="{{ sk.id }}" data-career-id="{{ sk.career_path_id }}">{{ t_skill_name(sk.name) }}</option>
+          {% endfor %}
+        </select>
+      </div>
+
+      <div class="form-group">
+        <label for="eval-title" class="form-label">{{ t('assess.eval_title') }}</label>
+        <input id="eval-title" name="title" type="text" class="form-control" required minlength="2" maxlength="140" placeholder="{{ t('assess.eval_placeholder') }}" />
+      </div>
+
+      <div class="form-grid">
+        <div class="form-group">
+          <label for="eval-type" class="form-label">{{ t('assess.field_type') }}</label>
+          <select id="eval-type" name="assessment_type" class="form-control">
+            {% for atype in assessment_types %}
+              <option value="{{ atype }}">{{ t_enum('assessment_type', atype) }}</option>
+            {% endfor %}
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label for="eval-score" class="form-label">{{ t('assess.field_score') }}</label>
+          <input id="eval-score" name="score" type="number" min="0" max="100" value="75" class="form-control" required />
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label for="eval-feedback" class="form-label">{{ t('assess.field_reflection') }}</label>
+        <textarea id="eval-feedback" name="feedback" class="form-control" placeholder="{{ t('assess.reflection_placeholder') }}"></textarea>
+      </div>
+
+      <button type="submit" class="btn btn-primary">{{ t('assess.record_btn') }}</button>
+    </form>
+  </div>
+</section>
+{% endblock %}

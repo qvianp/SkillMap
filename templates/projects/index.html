@@ -1,0 +1,275 @@
+{% extends "base.html" %}
+{% block title %}{{ t('projects.title') }}{% endblock %}
+{% block page_breadcrumb %}{{ t('bc.projects') }}{% endblock %}
+
+{% block topbar_action %}
+  <a href="{{ url_for('roadmap.index') }}" class="btn btn-sm btn-secondary">{{ t('projects.view_roadmap') }}</a>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <div>
+    <h1 class="page-title">{{ t('projects.heading') }}</h1>
+    <p class="page-subtitle">{{ t('projects.sub') }}</p>
+  </div>
+</div>
+
+<!-- Summary Strip -->
+<section class="grid-4" style="margin-bottom: 24px;">
+  <div class="kpi-card kpi-purple">
+    <div class="kpi-head">
+      <span class="kpi-label">{{ t('projects.kpi_total') }}</span>
+      <span class="kpi-icon" aria-hidden="true">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
+      </span>
+    </div>
+    <span class="kpi-value">{{ summary.total }}</span>
+  </div>
+  <div class="kpi-card kpi-blue">
+    <div class="kpi-head">
+      <span class="kpi-label">{{ t('projects.kpi_in_progress') }}</span>
+      <span class="kpi-icon" aria-hidden="true">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+      </span>
+    </div>
+    <span class="kpi-value">{{ summary.in_progress }}</span>
+  </div>
+  <div class="kpi-card kpi-turquoise">
+    <div class="kpi-head">
+      <span class="kpi-label">{{ t('projects.kpi_completed') }}</span>
+      <span class="kpi-icon" aria-hidden="true">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
+      </span>
+    </div>
+    <span class="kpi-value">{{ summary.completed }}</span>
+  </div>
+  <div class="kpi-card kpi-coral">
+    <div class="kpi-head">
+      <span class="kpi-label">{{ t('projects.kpi_avg') }}</span>
+      <span class="kpi-icon" aria-hidden="true">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>
+      </span>
+    </div>
+    <span class="kpi-value">{{ summary.avg_completion }}%</span>
+  </div>
+</section>
+
+<section class="grid-dashboard-main">
+  <!-- Projects List -->
+  <div class="stack-md">
+    <div class="surface-card">
+      <div class="toolbar" style="margin-bottom: 16px;">
+        <div class="segmented-bar" role="navigation" aria-label="{{ t('projects.filter_aria') }}">
+          <a href="{{ url_for('projects.index', status='all', q=filters.q) }}"
+             class="segmented-btn {% if filters.status == 'all' %}active{% endif %}">{{ t('common.all') }}</a>
+          {% for st in statuses %}
+            <a href="{{ url_for('projects.index', status=st, q=filters.q) }}"
+               class="segmented-btn {% if filters.status == st %}active{% endif %}">{{ t_enum('status', st) }}</a>
+          {% endfor %}
+        </div>
+
+        <form action="{{ url_for('projects.index') }}" method="GET" style="display: flex; gap: 8px;">
+          <input type="hidden" name="status" value="{{ filters.status }}" />
+          <input type="search" name="q" value="{{ filters.q }}" class="form-control" placeholder="{{ t('projects.search_placeholder') }}" aria-label="{{ t('projects.search_aria') }}" />
+          <button type="submit" class="btn btn-secondary btn-sm">{{ t('common.filter') }}</button>
+        </form>
+      </div>
+
+      {% if projects %}
+        <div class="stack-md">
+          {% for proj in projects %}
+            {% set proj_name = t_project_name(proj.name) %}
+            {% set proj_desc = t_project_desc(proj.name, proj.description or '') %}
+            <article class="{% if proj.career_slug %}career-theme--{{ proj.career_slug }}{% endif %}" style="padding-bottom: 16px; border-bottom: 1px solid var(--border-hairline);">
+              <div style="display: flex; flex-wrap: wrap; justify-content: space-between; align-items: flex-start; gap: 12px;">
+                <div>
+                  <div class="meta-line" style="margin-bottom: 4px;">
+                    <span class="status-label {% if proj.status == 'Completed' %}success{% elif proj.status == 'In Progress' %}indigo{% elif proj.status == 'On Hold' %}warning{% else %}muted{% endif %}">
+                      {{ t_enum('status', proj.status) }}
+                    </span>
+                    {% if proj.career_title %}
+                      <span aria-hidden="true">&middot;</span>
+                      <span class="career-dot" aria-hidden="true"></span>
+                      <span class="career-ink-text">{{ t_career_field(proj.career_slug, 'title', proj.career_title) }}</span>
+                    {% endif %}
+                    <span aria-hidden="true">&middot;</span>
+                    <span>{{ proj.tech_stack }}</span>
+                  </div>
+                  <h3 style="font-size: 1.0625rem;">{{ proj_name }}</h3>
+                </div>
+
+                <span class="font-mono" style="font-size: 1rem; font-weight: 700;">{{ proj.completion_percent }}%</span>
+              </div>
+
+              {% if proj_desc %}
+                <p style="margin-top: 6px; font-size: 0.875rem; color: var(--text-secondary);">{{ proj_desc }}</p>
+              {% endif %}
+
+              <div class="progress-track" style="margin-top: 10px;">
+                <div class="progress-fill {% if proj.status == 'Completed' %}success{% elif proj.career_slug %}career-progress-fill{% else %}violet{% endif %}" style="width: {{ proj.completion_percent }}%;"></div>
+              </div>
+
+              <div style="margin-top: 12px; display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 10px;">
+                <div>
+                  {% if proj.github_url %}
+                    <a href="{{ proj.github_url }}" target="_blank" rel="noopener noreferrer" style="font-size: 0.84375rem; font-weight: 600; color: var(--accent-indigo);">
+                      {{ t('projects.github_repo') }} {{ t('common.arrow_external') }}
+                    </a>
+                  {% else %}
+                    <span style="font-size: 0.8125rem; color: var(--text-muted);">{{ t('projects.no_repo') }}</span>
+                  {% endif %}
+                </div>
+
+                <div style="display: flex; gap: 8px;">
+                  <button
+                    type="button"
+                    class="btn btn-secondary btn-sm"
+                    data-edit-project
+                    data-id="{{ proj.id }}"
+                    data-name="{{ proj_name }}"
+                    data-stack="{{ proj.tech_stack }}"
+                    data-status="{{ proj.status }}"
+                    data-pct="{{ proj.completion_percent }}"
+                    data-career-id="{{ proj.career_path_id or '' }}"
+                    data-github="{{ proj.github_url }}"
+                    data-desc="{{ proj_desc }}"
+                  >
+                    {{ t('common.edit') }}
+                  </button>
+                  <form
+                    action="{{ url_for('projects.delete_project', project_id=proj.id) }}"
+                    method="POST"
+                    data-confirm="{{ t('projects.confirm_delete', name=proj_name) }}"
+                  >
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+                    <button type="submit" class="btn btn-ghost btn-sm" style="color: var(--status-danger);">{{ t('common.delete') }}</button>
+                  </form>
+                </div>
+              </div>
+            </article>
+          {% endfor %}
+        </div>
+      {% else %}
+        <div class="empty-state">
+          <div class="empty-state-title">{{ t('projects.empty_title') }}</div>
+          <p class="empty-state-desc">{{ t('projects.empty_desc') }}</p>
+        </div>
+      {% endif %}
+    </div>
+  </div>
+
+  <!-- Create Project Form -->
+  <div class="surface-card" style="height: fit-content;">
+    <div class="card-header">
+      <h2 class="card-title">{{ t('projects.new_card') }}</h2>
+    </div>
+    <form action="{{ url_for('projects.add_project') }}" method="POST" class="stack-md">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+
+      <div class="form-group">
+        <label for="proj-name" class="form-label">{{ t('projects.field_name') }}</label>
+        <input id="proj-name" name="name" type="text" class="form-control" required minlength="2" maxlength="120" placeholder="{{ t('projects.name_placeholder') }}" />
+      </div>
+
+      <div class="form-group">
+        <label for="proj-stack" class="form-label">{{ t('projects.field_stack') }}</label>
+        <input id="proj-stack" name="tech_stack" type="text" class="form-control" required minlength="2" maxlength="160" placeholder="{{ t('projects.stack_placeholder') }}" />
+      </div>
+
+      <div class="form-grid">
+        <div class="form-group">
+          <label for="proj-status" class="form-label">{{ t('projects.field_status') }}</label>
+          <select id="proj-status" name="status" class="form-control">
+            {% for st in statuses %}
+              <option value="{{ st }}">{{ t_enum('status', st) }}</option>
+            {% endfor %}
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label for="proj-pct" class="form-label">{{ t('projects.field_pct') }}</label>
+          <input id="proj-pct" name="completion_percent" type="number" min="0" max="100" value="10" class="form-control" />
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label for="proj-career" class="form-label">{{ t('projects.field_career') }}</label>
+        <select id="proj-career" name="career_path_id" class="form-control">
+          <option value="">{{ t('projects.general_portfolio') }}</option>
+          {% for c in careers %}
+            <option value="{{ c.id }}">{{ t_career_field(c.slug, 'title', c.title) }}</option>
+          {% endfor %}
+        </select>
+      </div>
+
+      <div class="form-group">
+        <label for="proj-github" class="form-label">{{ t('projects.field_github') }}</label>
+        <input id="proj-github" name="github_url" type="url" class="form-control" placeholder="{{ t('projects.github_placeholder') }}" />
+      </div>
+
+      <div class="form-group">
+        <label for="proj-desc" class="form-label">{{ t('projects.field_desc') }}</label>
+        <textarea id="proj-desc" name="description" class="form-control" placeholder="{{ t('projects.desc_placeholder') }}"></textarea>
+      </div>
+
+      <button type="submit" class="btn btn-primary">{{ t('projects.create_btn') }}</button>
+    </form>
+  </div>
+</section>
+
+<!-- Edit Project Modal -->
+<div class="modal-overlay" id="edit-project-modal" role="dialog" aria-modal="true" aria-labelledby="edit-proj-title">
+  <div class="modal-dialog" style="max-width: 540px;">
+    <div class="card-header">
+      <h2 id="edit-proj-title" class="card-title">{{ t('projects.edit_modal_title') }}</h2>
+      <button type="button" class="alert-dismiss" data-close-modal aria-label="{{ t('common.close_modal') }}">&times;</button>
+    </div>
+    <form id="edit-project-form" method="POST" class="stack-md">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+      <div class="form-group">
+        <label for="edit-proj-name" class="form-label">{{ t('projects.field_name') }}</label>
+        <input id="edit-proj-name" name="name" type="text" class="form-control" required />
+      </div>
+      <div class="form-group">
+        <label for="edit-proj-stack" class="form-label">{{ t('projects.field_stack') }}</label>
+        <input id="edit-proj-stack" name="tech_stack" type="text" class="form-control" required />
+      </div>
+      <div class="form-grid">
+        <div class="form-group">
+          <label for="edit-proj-status" class="form-label">{{ t('projects.field_status') }}</label>
+          <select id="edit-proj-status" name="status" class="form-control">
+            {% for st in statuses %}
+              <option value="{{ st }}">{{ t_enum('status', st) }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div class="form-group">
+          <label for="edit-proj-pct" class="form-label">{{ t('projects.field_pct') }}</label>
+          <input id="edit-proj-pct" name="completion_percent" type="number" min="0" max="100" class="form-control" />
+        </div>
+      </div>
+      <div class="form-group">
+        <label for="edit-proj-career" class="form-label">{{ t('projects.field_career') }}</label>
+        <select id="edit-proj-career" name="career_path_id" class="form-control">
+          <option value="">{{ t('projects.general_portfolio') }}</option>
+          {% for c in careers %}
+            <option value="{{ c.id }}">{{ t_career_field(c.slug, 'title', c.title) }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="form-group">
+        <label for="edit-proj-github" class="form-label">{{ t('projects.field_github') }}</label>
+        <input id="edit-proj-github" name="github_url" type="url" class="form-control" />
+      </div>
+      <div class="form-group">
+        <label for="edit-proj-desc" class="form-label">{{ t('projects.field_desc') }}</label>
+        <textarea id="edit-proj-desc" name="description" class="form-control"></textarea>
+      </div>
+      <div style="display: flex; justify-content: flex-end; gap: 10px;">
+        <button type="button" class="btn btn-secondary btn-sm" data-close-modal>{{ t('common.cancel') }}</button>
+        <button type="submit" class="btn btn-primary btn-sm">{{ t('common.save_changes') }}</button>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}

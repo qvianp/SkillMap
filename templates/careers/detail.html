@@ -1,0 +1,136 @@
+{% extends "base.html" %}
+{% from "_macros.html" import career_icon %}
+{% set career_localized_title = t_career_field(career.slug, 'title', career.title) %}
+{% block title %}{{ career_localized_title }}{% endblock %}
+{% block page_breadcrumb %}{{ t('bc.career_detail', title=career_localized_title) }}{% endblock %}
+
+{% block topbar_action %}
+  <a href="{{ url_for('careers.index') }}" class="btn btn-sm btn-secondary">{{ t('careers.all_careers') }}</a>
+{% endblock %}
+
+{% macro career_detail_body() %}
+<section class="surface-card career-card career-theme--{{ career.slug }}" style="margin-bottom: 24px;">
+  <div class="page-header" style="margin-bottom: 0;">
+    <div style="display: flex; align-items: flex-start; gap: 16px;">
+      <span class="career-emblem" style="width: 46px; height: 46px;">{{ career_icon(career.slug, 22) }}</span>
+      <div>
+        <div class="meta-line" style="margin-bottom: 6px;">
+          <span class="career-ink-text">{{ t_career_field(career.slug, 'difficulty_summary', career.difficulty_summary) }}</span>
+          <span aria-hidden="true">&middot;</span>
+          <span class="tabular-nums">{{ t('careers.est_hours', hours=career.estimated_hours) }}</span>
+          <span aria-hidden="true">&middot;</span>
+          <span class="tabular-nums">{{ t('careers.est_months', months=career.estimated_months) }}</span>
+        </div>
+        <h1 class="page-title">{{ career_localized_title }}</h1>
+        <p class="page-subtitle">{{ t_career_field(career.slug, 'description', career.description) }}</p>
+      </div>
+    </div>
+
+    <div>
+      {% if current_user %}
+        <form action="{{ url_for('careers.enroll', slug=career.slug) }}" method="POST">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+          <button type="submit" class="btn btn-primary">
+            {% if is_enrolled %}{{ t('careers.open_personalized') }}{% else %}{{ t('careers.enroll_generate') }}{% endif %}
+          </button>
+        </form>
+      {% else %}
+        <a href="{{ url_for('auth.register') }}" class="btn btn-primary">{{ t('careers.signup_start') }}</a>
+      {% endif %}
+    </div>
+  </div>
+</section>
+
+<!-- Skill Progression Levels -->
+<section class="stack-lg" style="margin-bottom: 28px;">
+  <div class="grid-3">
+    {% set stage_classes = {'Beginner': 'kpi-turquoise', 'Intermediate': 'kpi-purple', 'Advanced': 'kpi-coral'} %}
+    {% for level_name in ['Beginner', 'Intermediate', 'Advanced'] %}
+      <div class="kpi-card {{ stage_classes[level_name] }}" style="padding: 20px; gap: 14px;">
+        <div class="card-header" style="margin-bottom: 0;">
+          <h2 class="card-title level-text--{{ level_name }}">{{ t('careers.stage_title', level=t_enum('level', level_name)) }}</h2>
+          <span class="font-mono" style="font-size: 0.8125rem; color: var(--text-muted);">
+            {{ t('common.skills_count', count=skills_by_level[level_name]|length) }}
+          </span>
+        </div>
+        <div class="stack-md">
+          {% for skill in skills_by_level[level_name] %}
+            <div style="padding-bottom: 12px; border-bottom: 1px solid var(--border-hairline);">
+              <div style="display: flex; justify-content: space-between; gap: 8px;">
+                <strong style="font-size: 0.9375rem;">{{ t_skill_name(skill.name) }}</strong>
+                <span class="font-mono" style="font-size: 0.8125rem; color: var(--text-muted);">{{ skill.estimated_hours }}{{ t('common.hours_unit') }}</span>
+              </div>
+              <p style="margin-top: 4px; font-size: 0.84375rem; color: var(--text-secondary);">
+                {{ t_skill_desc(skill.name, skill.description) }}
+              </p>
+            </div>
+          {% endfor %}
+        </div>
+      </div>
+    {% endfor %}
+  </div>
+</section>
+
+<!-- Recommended Projects & Curated Resources -->
+<section class="grid-2">
+  <div class="surface-card">
+    <div class="card-header">
+      <h2 class="card-title">{{ t('careers.rec_projects') }}</h2>
+    </div>
+    <div class="stack-md">
+      {% for proj in recommended_projects %}
+        <div class="list-row">
+          <div>
+            <div class="meta-line" style="margin-bottom: 4px;">
+              <span>{{ t_enum('level', proj.level) }}</span>
+              <span aria-hidden="true">&middot;</span>
+              <span class="tabular-nums">{{ proj.estimated_hours }}{{ t('common.hours_unit') }}</span>
+              <span aria-hidden="true">&middot;</span>
+              <span>{{ proj.tech_stack }}</span>
+            </div>
+            <strong style="font-size: 0.9375rem;">{{ t_rec_project_title(proj.title) }}</strong>
+            <p style="margin-top: 4px; font-size: 0.84375rem; color: var(--text-secondary);">{{ t_rec_project_desc(proj.title, proj.description) }}</p>
+          </div>
+        </div>
+      {% endfor %}
+    </div>
+  </div>
+
+  <div class="surface-card">
+    <div class="card-header">
+      <h2 class="card-title">{{ t('careers.curated_resources') }}</h2>
+    </div>
+    <div class="stack-md">
+      {% for res in curated_resources %}
+        <div class="list-row">
+          <div style="min-width: 0; flex: 1;">
+            <div class="meta-line" style="margin-bottom: 4px;">
+              <span>{{ t_enum('category', res.category) }}</span>
+              <span aria-hidden="true">&middot;</span>
+              <span>{{ t_enum('level', res.difficulty) }}</span>
+            </div>
+            <a href="{{ res.url }}" target="_blank" rel="noopener noreferrer" style="font-weight: 600; color: var(--accent-indigo);">
+              {{ t_resource_title(res.title) }} {{ t('common.arrow_external') }}
+            </a>
+            <p style="margin-top: 4px; font-size: 0.84375rem; color: var(--text-secondary);">{{ t_resource_desc(res.title, res.description) }}</p>
+          </div>
+          {% if current_user %}
+            <form action="{{ url_for('resources.save_curated', resource_id=res.id) }}" method="POST">
+              <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+              <button type="submit" class="btn btn-secondary btn-sm">{{ t('common.save') }}</button>
+            </form>
+          {% endif %}
+        </div>
+      {% endfor %}
+    </div>
+  </div>
+</section>
+{% endmacro %}
+
+{% block content %}
+  {{ career_detail_body() }}
+{% endblock %}
+
+{% block public_content %}
+  {{ career_detail_body() }}
+{% endblock %}

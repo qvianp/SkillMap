@@ -1,0 +1,239 @@
+<!doctype html>
+<html lang="{{ current_lang }}" dir="{{ text_dir }}">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="csrf-token" content="{{ csrf_token() }}" />
+    <title>{% block title %}{{ t('app.name') }}{% endblock %} — {{ t('app.name') }}</title>
+    <meta name="description" content="{{ t('meta.description') }}" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&family=Plus+Jakarta+Sans:wght@500;600;700&family=Vazirmatn:wght@400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}" />
+    {% block head_extra %}{% endblock %}
+  </head>
+  <body>
+    {% macro language_switcher() %}
+      <div class="lang-switcher" role="group" aria-label="{{ t('lang.label') }}">
+        <form action="{{ url_for('main.switch_language', lang_code='en') }}" method="POST" style="display: inline-flex;">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+          <input type="hidden" name="next" value="{{ request.full_path if request.query_string else request.path }}" />
+          <button
+            type="submit"
+            class="lang-switcher-btn {% if current_lang == 'en' %}active{% endif %}"
+            data-lang-switch="en"
+            aria-pressed="{{ 'true' if current_lang == 'en' else 'false' }}"
+            aria-label="{{ t('lang.switch_to_en') }}"
+            title="{{ t('lang.switch_to_en') }}"
+          >{{ t('lang.en') }}</button>
+        </form>
+        <form action="{{ url_for('main.switch_language', lang_code='fa') }}" method="POST" style="display: inline-flex;">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+          <input type="hidden" name="next" value="{{ request.full_path if request.query_string else request.path }}" />
+          <button
+            type="submit"
+            class="lang-switcher-btn {% if current_lang == 'fa' %}active{% endif %}"
+            data-lang-switch="fa"
+            aria-pressed="{{ 'true' if current_lang == 'fa' else 'false' }}"
+            aria-label="{{ t('lang.switch_to_fa') }}"
+            title="{{ t('lang.switch_to_fa') }}"
+          >{{ t('lang.fa') }}</button>
+        </form>
+      </div>
+    {% endmacro %}
+
+    {% if current_user %}
+      <div class="app-shell">
+        <div class="sidebar-backdrop" id="sidebar-backdrop" aria-hidden="true"></div>
+
+        <aside class="sidebar" id="app-sidebar" aria-label="{{ t('nav.sidebar_aria') }}">
+          <div class="sidebar-brand">
+            <a href="{{ url_for('main.dashboard') }}" class="brand-mark">
+              <span class="brand-icon" aria-hidden="true">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                  <polygon points="3 6 9 3 15 6 21 3 21 18 15 21 9 18 3 21" />
+                  <line x1="9" y1="3" x2="9" y2="18" />
+                  <line x1="15" y1="6" x2="15" y2="21" />
+                </svg>
+              </span>
+              <span>{{ t('app.name') }}</span>
+            </a>
+            <button type="button" class="sidebar-close-btn" id="sidebar-close-btn" aria-label="{{ t('nav.close_menu') }}">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <line x1="18" y1="6" x2="6" y2="18" />
+                <line x1="6" y1="6" x2="18" y2="18" />
+              </svg>
+            </button>
+          </div>
+
+          <nav class="sidebar-nav">
+            <div class="nav-section-label">{{ t('nav.workspace') }}</div>
+            <a href="{{ url_for('main.dashboard') }}" class="nav-link {% if request.endpoint == 'main.dashboard' %}active{% endif %}">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="9" rx="1"/><rect x="14" y="3" width="7" height="5" rx="1"/><rect x="14" y="12" width="7" height="9" rx="1"/><rect x="3" y="16" width="7" height="5" rx="1"/></svg>
+              <span>{{ t('nav.dashboard') }}</span>
+            </a>
+            <a href="{{ url_for('careers.index') }}" class="nav-link {% if request.blueprint == 'careers' %}active{% endif %}">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polygon points="16.24 7.76 14.12 14.12 7.76 16.24 9.88 9.88 16.24 7.76"/></svg>
+              <span>{{ t('nav.career_explorer') }}</span>
+            </a>
+            <a href="{{ url_for('roadmap.index') }}" class="nav-link {% if request.blueprint == 'roadmap' %}active{% endif %}">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
+              <span>{{ t('nav.my_roadmap') }}</span>
+            </a>
+
+            <div class="nav-section-label">{{ t('nav.learning_hub') }}</div>
+            <a href="{{ url_for('resources.index') }}" class="nav-link {% if request.blueprint == 'resources' %}active{% endif %}">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>
+              <span>{{ t('nav.resource_library') }}</span>
+            </a>
+            <a href="{{ url_for('projects.index') }}" class="nav-link {% if request.blueprint == 'projects' %}active{% endif %}">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
+              <span>{{ t('nav.project_tracker') }}</span>
+            </a>
+            <a href="{{ url_for('hub.notes_index') }}" class="nav-link {% if request.endpoint == 'hub.notes_index' %}active{% endif %}">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+              <span>{{ t('nav.study_notes') }}</span>
+            </a>
+            <a href="{{ url_for('hub.assessments_index') }}" class="nav-link {% if request.endpoint in ('hub.assessments_index', 'hub.take_quiz') %}active{% endif %}">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
+              <span>{{ t('nav.skill_assessments') }}</span>
+            </a>
+
+            <div class="nav-section-label">{{ t('nav.account') }}</div>
+            <a href="{{ url_for('auth.profile') }}" class="nav-link {% if request.endpoint == 'auth.profile' %}active{% endif %}">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+              <span>{{ t('nav.profile_goals') }}</span>
+            </a>
+          </nav>
+
+          <div class="sidebar-footer">
+            <a href="{{ url_for('auth.profile') }}" class="user-mini-card">
+              <div class="user-avatar" aria-hidden="true">{{ current_user.full_name[:1]|upper }}</div>
+              <div class="user-mini-meta">
+                <div class="user-mini-name">{{ current_user.full_name }}</div>
+                <div class="user-mini-email">{{ current_user.email }}</div>
+              </div>
+            </a>
+            <form action="{{ url_for('auth.logout') }}" method="POST">
+              <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+              <button type="submit" class="btn btn-sm btn-sidebar-logout">{{ t('nav.sign_out') }}</button>
+            </form>
+          </div>
+        </aside>
+
+        <div class="main-wrapper">
+          <header class="topbar">
+            <div class="topbar-left">
+              <button
+                type="button"
+                class="mobile-menu-btn"
+                id="mobile-menu-btn"
+                aria-label="{{ t('nav.open_menu') }}"
+                aria-expanded="false"
+              >
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <line x1="3" y1="6" x2="21" y2="6" />
+                  <line x1="3" y1="12" x2="21" y2="12" />
+                  <line x1="3" y1="18" x2="21" y2="18" />
+                </svg>
+              </button>
+              <div class="topbar-breadcrumb">{% block page_breadcrumb %}{{ t('nav.workspace_default') }}{% endblock %}</div>
+            </div>
+            <div class="topbar-right">
+              {{ language_switcher() }}
+              {% block topbar_action %}
+                <a href="{{ url_for('careers.index') }}" class="btn btn-sm btn-primary">{{ t('nav.explore_careers') }}</a>
+              {% endblock %}
+            </div>
+          </header>
+
+          <main class="main-content">
+            {% with messages = get_flashed_messages(with_categories=true) %}
+              {% if messages %}
+                <div class="flash-stack" role="status" aria-live="polite">
+                  {% for category, message in messages %}
+                    <div class="alert alert-{{ category }}">
+                      <span>{{ message }}</span>
+                      <button type="button" class="alert-dismiss" data-dismiss-alert aria-label="{{ t('common.dismiss') }}">&times;</button>
+                    </div>
+                  {% endfor %}
+                </div>
+              {% endif %}
+            {% endwith %}
+
+            {% block content %}{% endblock %}
+          </main>
+
+          <footer class="site-footer">
+            <span>{{ t('footer.left') }}</span>
+            <span>{{ t('footer.right') }}</span>
+          </footer>
+        </div>
+      </div>
+    {% else %}
+      <header class="public-header">
+        <div class="public-header-inner">
+          <a href="{{ url_for('main.index') }}" class="brand-mark">
+            <span class="brand-icon" aria-hidden="true">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                <polygon points="3 6 9 3 15 6 21 3 21 18 15 21 9 18 3 21" />
+                <line x1="9" y1="3" x2="9" y2="18" />
+                <line x1="15" y1="6" x2="15" y2="21" />
+              </svg>
+            </span>
+            <span>{{ t('app.name') }}</span>
+          </a>
+
+          <nav class="public-nav" aria-label="{{ t('nav.public_aria') }}">
+            <a href="{{ url_for('careers.index') }}" class="public-nav-link">{{ t('nav.career_paths') }}</a>
+            <a href="{{ url_for('auth.login') }}" class="public-nav-link">{{ t('nav.sign_in') }}</a>
+          </nav>
+
+          <div style="display: flex; align-items: center; gap: 10px; flex-shrink: 0;">
+            {{ language_switcher() }}
+            <a href="{{ url_for('auth.register') }}" class="btn btn-sm btn-primary">{{ t('nav.create_account') }}</a>
+          </div>
+        </div>
+      </header>
+
+      <main class="public-container">
+        {% with messages = get_flashed_messages(with_categories=true) %}
+          {% if messages %}
+            <div class="flash-stack" role="status" aria-live="polite">
+              {% for category, message in messages %}
+                <div class="alert alert-{{ category }}">
+                  <span>{{ message }}</span>
+                  <button type="button" class="alert-dismiss" data-dismiss-alert aria-label="{{ t('common.dismiss') }}">&times;</button>
+                </div>
+              {% endfor %}
+            </div>
+          {% endif %}
+        {% endwith %}
+
+        {% block public_content %}{% endblock %}
+      </main>
+    {% endif %}
+
+    <!-- Reusable Accessible Confirmation Modal -->
+    <div class="modal-overlay" id="confirm-modal" role="dialog" aria-modal="true" aria-labelledby="confirm-modal-title">
+      <div class="modal-dialog">
+        <h3 id="confirm-modal-title" class="card-title">{{ t('common.confirm_action') }}</h3>
+        <p id="confirm-modal-message" style="margin-top: 8px; color: var(--text-secondary); font-size: 0.9rem;">
+          {{ t('common.confirm_default') }}
+        </p>
+        <div style="margin-top: 20px; display: flex; justify-content: flex-end; gap: 10px;">
+          <button type="button" class="btn btn-secondary btn-sm" data-close-confirm>{{ t('common.cancel') }}</button>
+          <button type="button" class="btn btn-danger-outline btn-sm" id="confirm-modal-proceed">{{ t('common.confirm_delete') }}</button>
+        </div>
+      </div>
+    </div>
+
+    <script id="skillmap-i18n-data" type="application/json">{{ client_i18n | tojson }}</script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
+    <script src="{{ url_for('static', filename='js/app.js') }}"></script>
+    {% block scripts %}{% endblock %}
+  </body>
+</html>

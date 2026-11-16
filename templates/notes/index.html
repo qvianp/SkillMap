@@ -1,0 +1,166 @@
+{% extends "base.html" %}
+{% block title %}{{ t('notes.title') }}{% endblock %}
+{% block page_breadcrumb %}{{ t('bc.notes') }}{% endblock %}
+
+{% block topbar_action %}
+  <a href="{{ url_for('hub.assessments_index') }}" class="btn btn-sm btn-secondary">{{ t('nav.skill_assessments') }}</a>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <div>
+    <h1 class="page-title">{{ t('notes.heading') }}</h1>
+    <p class="page-subtitle">{{ t('notes.sub') }}</p>
+  </div>
+</div>
+
+<section class="grid-dashboard-main">
+  <!-- Notes List -->
+  <div class="surface-card">
+    <form action="{{ url_for('hub.notes_index') }}" method="GET" class="toolbar">
+      <div class="toolbar-filters">
+        <input
+          type="search"
+          name="q"
+          class="form-control search-input"
+          value="{{ filters.q }}"
+          placeholder="{{ t('notes.search_placeholder') }}"
+          aria-label="{{ t('notes.search_aria') }}"
+        />
+        <select name="career_id" class="form-control" style="width: auto;" aria-label="{{ t('notes.filter_career_aria') }}">
+          <option value="">{{ t('notes.all_careers') }}</option>
+          {% for c in careers %}
+            <option value="{{ c.id }}" {% if filters.career_id == c.id|string %}selected{% endif %}>{{ t_career_field(c.slug, 'title', c.title) }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div style="display: flex; gap: 8px;">
+        <button type="submit" class="btn btn-secondary btn-sm">{{ t('common.filter') }}</button>
+        {% if filters.q or filters.career_id %}
+          <a href="{{ url_for('hub.notes_index') }}" class="btn btn-ghost btn-sm">{{ t('common.reset') }}</a>
+        {% endif %}
+      </div>
+    </form>
+
+    {% if notes %}
+      <div class="stack-md">
+        {% for note in notes %}
+          {% set note_title = t_note_title(note.title) %}
+          {% set note_content = t_note_content(note.title, note.content) %}
+          <article class="{% if note.career_slug %}career-theme--{{ note.career_slug }}{% endif %}" style="padding-bottom: 16px; border-bottom: 1px solid var(--border-hairline);">
+            <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 12px;">
+              <div>
+                <div class="meta-line" style="margin-bottom: 4px;">
+                  <span class="career-dot" aria-hidden="true"></span>
+                  <span class="career-ink-text">{{ t_career_field(note.career_slug, 'title', note.career_title) }}</span>
+                  {% if note.skill_name %}
+                    <span aria-hidden="true">&middot;</span>
+                    <span>{{ t_skill_name(note.skill_name) }}</span>
+                  {% endif %}
+                  <span aria-hidden="true">&middot;</span>
+                  <span class="tabular-nums">{{ note.updated_at|format_datetime }}</span>
+                </div>
+                <h3 style="font-size: 1.0625rem;">{{ note_title }}</h3>
+              </div>
+
+              <div style="display: flex; gap: 6px;">
+                <button
+                  type="button"
+                  class="btn btn-secondary btn-sm"
+                  data-edit-note
+                  data-id="{{ note.id }}"
+                  data-title="{{ note_title }}"
+                  data-content="{{ note_content }}"
+                >
+                  {{ t('common.edit') }}
+                </button>
+                <form
+                  action="{{ url_for('hub.delete_note', note_id=note.id) }}"
+                  method="POST"
+                  data-confirm="{{ t('notes.confirm_delete', title=note_title) }}"
+                >
+                  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+                  <button type="submit" class="btn btn-ghost btn-sm" style="color: var(--status-danger);">{{ t('common.delete') }}</button>
+                </form>
+              </div>
+            </div>
+
+            <pre style="margin: 10px 0 0; white-space: pre-wrap; font-family: var(--font-body); font-size: 0.9rem; color: var(--text-secondary); line-height: 1.55;">{{ note_content }}</pre>
+          </article>
+        {% endfor %}
+      </div>
+    {% else %}
+      <div class="empty-state">
+        <div class="empty-state-title">{{ t('notes.empty_title') }}</div>
+        <p class="empty-state-desc">{{ t('notes.empty_desc') }}</p>
+      </div>
+    {% endif %}
+  </div>
+
+  <!-- Create Note Form -->
+  <div class="surface-card" style="height: fit-content;">
+    <div class="card-header">
+      <h2 class="card-title">{{ t('notes.create_card') }}</h2>
+    </div>
+    <form action="{{ url_for('hub.add_note') }}" method="POST" class="stack-md">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+
+      <div class="form-group">
+        <label for="note-career" class="form-label">{{ t('notes.field_career') }}</label>
+        <select id="note-career" name="career_path_id" class="form-control" required data-career-select="note-skill">
+          {% for c in careers %}
+            <option value="{{ c.id }}">{{ t_career_field(c.slug, 'title', c.title) }}</option>
+          {% endfor %}
+        </select>
+      </div>
+
+      <div class="form-group">
+        <label for="note-skill" class="form-label">{{ t('notes.field_skill_opt') }}</label>
+        <select id="note-skill" name="skill_id" class="form-control">
+          <option value="">{{ t('notes.general_note') }}</option>
+          {% for sk in skills %}
+            <option value="{{ sk.id }}" data-career-id="{{ sk.career_path_id }}">{{ t_skill_name(sk.name) }}</option>
+          {% endfor %}
+        </select>
+      </div>
+
+      <div class="form-group">
+        <label for="note-title" class="form-label">{{ t('notes.field_title') }}</label>
+        <input id="note-title" name="title" type="text" class="form-control" required minlength="2" maxlength="140" placeholder="{{ t('notes.title_placeholder') }}" />
+      </div>
+
+      <div class="form-group">
+        <label for="note-content" class="form-label">{{ t('notes.field_content') }}</label>
+        <textarea id="note-content" name="content" class="form-control" style="min-height: 160px;" required placeholder="{{ t('notes.content_placeholder') }}"></textarea>
+      </div>
+
+      <button type="submit" class="btn btn-primary">{{ t('notes.save_btn') }}</button>
+    </form>
+  </div>
+</section>
+
+<!-- Edit Note Modal -->
+<div class="modal-overlay" id="edit-note-modal" role="dialog" aria-modal="true" aria-labelledby="edit-note-heading">
+  <div class="modal-dialog" style="max-width: 540px;">
+    <div class="card-header">
+      <h2 id="edit-note-heading" class="card-title">{{ t('notes.edit_modal_title') }}</h2>
+      <button type="button" class="alert-dismiss" data-close-modal aria-label="{{ t('common.close_modal') }}">&times;</button>
+    </div>
+    <form id="edit-note-form" method="POST" class="stack-md">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+      <div class="form-group">
+        <label for="edit-note-title" class="form-label">{{ t('notes.field_title') }}</label>
+        <input id="edit-note-title" name="title" type="text" class="form-control" required />
+      </div>
+      <div class="form-group">
+        <label for="edit-note-content" class="form-label">{{ t('notes.field_content') }}</label>
+        <textarea id="edit-note-content" name="content" class="form-control" style="min-height: 180px;" required></textarea>
+      </div>
+      <div style="display: flex; justify-content: flex-end; gap: 10px;">
+        <button type="button" class="btn btn-secondary btn-sm" data-close-modal>{{ t('common.cancel') }}</button>
+        <button type="submit" class="btn btn-primary btn-sm">{{ t('notes.update_btn') }}</button>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}

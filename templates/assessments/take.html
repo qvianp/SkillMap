@@ -1,0 +1,111 @@
+{% extends "base.html" %}
+{% from "_macros.html" import career_icon %}
+{% set career_localized_title = t_career_field(career.slug, 'title', career.title) %}
+{% block title %}{{ t('quiz.title', title=career_localized_title) }}{% endblock %}
+{% block page_breadcrumb %}{{ t('bc.quiz', title=career_localized_title) }}{% endblock %}
+
+{% block topbar_action %}
+  <a href="{{ url_for('hub.assessments_index') }}" class="btn btn-sm btn-secondary">{{ t('quiz.all_assessments') }}</a>
+{% endblock %}
+
+{% block content %}
+<div class="page-header career-theme--{{ career.slug }}">
+  <div style="display: flex; align-items: center; gap: 14px;">
+    <span class="career-emblem" style="width: 44px; height: 44px; border-radius: 12px;" aria-hidden="true">{{ career_icon(career.slug, 22) }}</span>
+    <div>
+      <h1 class="page-title">{{ t('quiz.title', title=career_localized_title) }}</h1>
+      <p class="page-subtitle">{{ t('quiz.subtitle', count=questions|length) }}</p>
+    </div>
+  </div>
+</div>
+
+{% if submitted %}
+  <section class="surface-card career-card career-theme--{{ career.slug }}" data-quiz-submitted="true" style="margin-bottom: 24px;">
+    <div style="display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 16px;">
+      <div>
+        <div class="meta-line" style="margin-bottom: 4px;">
+          <span>{{ t('quiz.graded_saved') }}</span>
+          <span aria-hidden="true">&middot;</span>
+          <span class="tabular-nums">{{ t('quiz.correct_of', correct=correct_count, total=total) }}</span>
+        </div>
+        <h2 style="font-size: 1.375rem;">
+          {{ t('quiz.score_label') }} <span class="font-mono">{{ score }}%</span>
+          {% if needs_practice %}
+            <span class="status-label warning" style="margin-inline-start: 10px;">{{ t('assess.needs_practice') }}</span>
+          {% else %}
+            <span class="status-label success" style="margin-inline-start: 10px;">{{ t('assess.proficient') }}</span>
+          {% endif %}
+        </h2>
+        <p style="margin-top: 6px; color: var(--text-secondary);">{{ feedback }}</p>
+      </div>
+
+      <div style="display: flex; gap: 10px;">
+        <a href="{{ url_for('hub.take_quiz', slug=career.slug) }}" class="btn btn-secondary btn-sm">{{ t('quiz.retake_btn') }}</a>
+        <a href="{{ url_for('hub.assessments_index') }}" class="btn btn-primary btn-sm">{{ t('quiz.back_btn') }}</a>
+      </div>
+    </div>
+  </section>
+
+  <section class="stack-md">
+    {% for r in results %}
+      <article class="surface-card">
+        <div style="display: flex; justify-content: space-between; gap: 12px; margin-bottom: 8px;">
+          <div class="meta-line">
+            <span class="tabular-nums">{{ t('quiz.question_n', n=loop.index) }}</span>
+            {% if r.question.skill_name %}
+              <span aria-hidden="true">&middot;</span>
+              <span>{{ t_skill_name(r.question.skill_name) }}</span>
+            {% endif %}
+            <span aria-hidden="true">&middot;</span>
+            <span class="level-text--{{ r.question.difficulty }}">{{ t_enum('level', r.question.difficulty) }}</span>
+          </div>
+          {% if r.is_correct %}
+            <span class="status-label success">{{ t('quiz.correct') }}</span>
+          {% else %}
+            <span class="status-label danger">{{ t('quiz.incorrect', chosen=r.chosen or t('quiz.none'), expected=r.question.correct_option) }}</span>
+          {% endif %}
+        </div>
+
+        <h3 style="font-size: 1rem;">{{ r.question.question_text }}</h3>
+        <p style="margin-top: 10px; font-size: 0.875rem; color: var(--text-secondary);">
+          <strong>{{ t('quiz.explanation') }}</strong> {{ r.question.explanation }}
+        </p>
+      </article>
+    {% endfor %}
+  </section>
+{% else %}
+  <form action="{{ url_for('hub.take_quiz', slug=career.slug) }}" method="POST" class="stack-lg">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+
+    {% for q in questions %}
+      <fieldset class="surface-card" style="border: 1px solid var(--border-hairline); margin: 0;">
+        <legend class="sr-only">{{ t('quiz.question_n', n=loop.index) }}</legend>
+        <div class="meta-line" style="margin-bottom: 8px;">
+          <span class="tabular-nums">{{ t('quiz.question_of', n=loop.index, total=questions|length) }}</span>
+          {% if q.skill_name %}
+            <span aria-hidden="true">&middot;</span>
+            <span>{{ t_skill_name(q.skill_name) }}</span>
+          {% endif %}
+          <span aria-hidden="true">&middot;</span>
+          <span class="level-text--{{ q.difficulty }}">{{ t_enum('level', q.difficulty) }}</span>
+        </div>
+
+        <h2 style="font-size: 1.0625rem; margin-bottom: 14px;">{{ q.question_text }}</h2>
+
+        <div class="stack-sm">
+          {% for opt_key, opt_val in [('A', q.option_a), ('B', q.option_b), ('C', q.option_c), ('D', q.option_d)] %}
+            <label class="quiz-option">
+              <input type="radio" name="q_{{ q.id }}" value="{{ opt_key }}" required />
+              <span><strong>{{ opt_key }}.</strong> {{ opt_val }}</span>
+            </label>
+          {% endfor %}
+        </div>
+      </fieldset>
+    {% endfor %}
+
+    <div>
+      <button type="submit" class="btn btn-primary">{{ t('quiz.submit_btn') }}</button>
+    </div>
+  </form>
+{% endif %}
+{% endblock %}

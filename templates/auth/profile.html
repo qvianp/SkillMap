@@ -1,0 +1,154 @@
+{% extends "base.html" %}
+{% from "_macros.html" import password_toggle %}
+{% block title %}{{ t('profile.title') }}{% endblock %}
+{% block page_breadcrumb %}{{ t('bc.profile') }}{% endblock %}
+
+{% block topbar_action %}
+  <a href="{{ url_for('main.dashboard') }}" class="btn btn-sm btn-secondary">{{ t('profile.back_dashboard') }}</a>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <div>
+    <h1 class="page-title">{{ t('profile.heading') }}</h1>
+    <p class="page-subtitle">{{ t('profile.sub') }}</p>
+  </div>
+</div>
+
+<div class="grid-4" style="margin-bottom: 24px;">
+  <div class="kpi-card kpi-purple">
+    <div class="kpi-head">
+      <span class="kpi-label">{{ t('profile.stat_active_paths') }}</span>
+      <span class="kpi-icon" aria-hidden="true">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polygon points="16.24 7.76 14.12 14.12 7.76 16.24 9.88 9.88 16.24 7.76"/></svg>
+      </span>
+    </div>
+    <span class="kpi-value">{{ stats.active_paths }}</span>
+  </div>
+  <div class="kpi-card kpi-blue">
+    <div class="kpi-head">
+      <span class="kpi-label">{{ t('profile.stat_completed_tasks') }}</span>
+      <span class="kpi-icon" aria-hidden="true">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
+      </span>
+    </div>
+    <span class="kpi-value">{{ stats.completed_tasks }}</span>
+  </div>
+  <div class="kpi-card kpi-turquoise">
+    <div class="kpi-head">
+      <span class="kpi-label">{{ t('profile.stat_portfolio_projects') }}</span>
+      <span class="kpi-icon" aria-hidden="true">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
+      </span>
+    </div>
+    <span class="kpi-value">{{ stats.total_projects }}</span>
+  </div>
+  <div class="kpi-card kpi-coral">
+    <div class="kpi-head">
+      <span class="kpi-label">{{ t('profile.stat_total_hours') }}</span>
+      <span class="kpi-icon" aria-hidden="true">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+      </span>
+    </div>
+    <span class="kpi-value">{{ "%.1f"|format(stats.total_hours) }}{{ t('common.hours_unit') }}</span>
+  </div>
+</div>
+
+<div class="grid-2">
+  <section class="surface-card">
+    <div class="card-header">
+      <h2 class="card-title">{{ t('profile.learner_card') }}</h2>
+    </div>
+    <form action="{{ url_for('auth.profile') }}" method="POST" class="stack-md">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+      <input type="hidden" name="action" value="update_profile" />
+
+      <div class="form-group">
+        <label for="prof-name" class="form-label">{{ t('auth.full_name_label') }}</label>
+        <input id="prof-name" name="full_name" type="text" class="form-control" required value="{{ current_user.full_name }}" />
+      </div>
+
+      <div class="form-group">
+        <label for="prof-email" class="form-label">{{ t('auth.email_label') }}</label>
+        <input id="prof-email" type="email" class="form-control" value="{{ current_user.email }}" disabled />
+        <span class="form-hint">{{ t('profile.email_hint') }}</span>
+      </div>
+
+      <div class="form-grid">
+        <div class="form-group">
+          <label for="prof-career" class="form-label">{{ t('profile.primary_career') }}</label>
+          <select id="prof-career" name="target_career_id" class="form-control">
+            <option value="">{{ t('profile.none_selected') }}</option>
+            {% for career in careers %}
+              <option value="{{ career.id }}" {% if current_user.target_career_id == career.id %}selected{% endif %}>
+                {{ t_career_field(career.slug, 'title', career.title) }}
+              </option>
+            {% endfor %}
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label for="prof-goal" class="form-label">{{ t('profile.weekly_goal_hours') }}</label>
+          <input
+            id="prof-goal"
+            name="weekly_goal_hours"
+            type="number"
+            min="1"
+            max="100"
+            step="0.5"
+            class="form-control"
+            value="{{ current_user.weekly_goal_hours }}"
+          />
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label for="prof-bio" class="form-label">{{ t('profile.bio_label') }}</label>
+        <textarea id="prof-bio" name="bio" class="form-control" maxlength="500" placeholder="{{ t('profile.bio_placeholder') }}">{{ current_user.bio }}</textarea>
+      </div>
+
+      <div>
+        <button type="submit" class="btn btn-primary">{{ t('profile.save_btn') }}</button>
+      </div>
+    </form>
+  </section>
+
+  <section class="surface-card">
+    <div class="card-header">
+      <h2 class="card-title">{{ t('profile.security_card') }}</h2>
+    </div>
+    <form action="{{ url_for('auth.profile') }}" method="POST" class="stack-md">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+      <input type="hidden" name="action" value="change_password" />
+
+      <div class="form-group">
+        <label for="pw-current" class="form-label">{{ t('profile.current_password') }}</label>
+        <div class="password-field">
+          <input id="pw-current" name="current_password" type="password" class="form-control password-input" required autocomplete="current-password" />
+          {{ password_toggle('pw-current', t('auth.show_password')) }}
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label for="pw-new" class="form-label">{{ t('profile.new_password') }}</label>
+        <div class="password-field">
+          <input id="pw-new" name="new_password" type="password" class="form-control password-input" required minlength="8" autocomplete="new-password" />
+          {{ password_toggle('pw-new', t('auth.show_password')) }}
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label for="pw-confirm" class="form-label">{{ t('profile.confirm_new_password') }}</label>
+        <div class="password-field">
+          <input id="pw-confirm" name="confirm_password" type="password" class="form-control password-input" required minlength="8" autocomplete="new-password" />
+          {{ password_toggle('pw-confirm', t('auth.show_password')) }}
+        </div>
+      </div>
+
+      <div>
+        <button type="submit" class="btn btn-secondary">{{ t('profile.update_pw_btn') }}</button>
+      </div>
+    </form>
+  </section>
+</div>
+{% endblock %}

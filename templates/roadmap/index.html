@@ -1,0 +1,379 @@
+{% extends "base.html" %}
+{% from "_macros.html" import career_icon %}
+{% block title %}{{ t('roadmap.title') }}{% endblock %}
+{% block page_breadcrumb %}{{ t('bc.roadmap') }}{% endblock %}
+
+{% block topbar_action %}
+  <a href="{{ url_for('careers.index') }}" class="btn btn-sm btn-secondary">{{ t('roadmap.browse_all') }}</a>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <div>
+    <h1 class="page-title">{{ t('roadmap.heading') }}</h1>
+    <p class="page-subtitle">{{ t('roadmap.sub') }}</p>
+  </div>
+
+  <!-- Switch or Enroll Career Path -->
+  {% set enrolled_ids = enrolled_careers | map(attribute='id') | list %}
+  <form action="{{ url_for('roadmap.select_career') }}" method="POST" style="display: flex; gap: 8px; align-items: center;">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+    <select name="career_path_id" class="form-control" aria-label="{{ t('roadmap.select_aria') }}" style="min-width: 220px;">
+      {% for c in all_careers %}
+        <option value="{{ c.id }}" {% if selected_career and selected_career.id == c.id %}selected{% endif %}>
+          {{ t_career_field(c.slug, 'title', c.title) }}{% if c.id in enrolled_ids %} {{ t('roadmap.enrolled_suffix') }}{% endif %}
+        </option>
+      {% endfor %}
+    </select>
+    <button type="submit" class="btn btn-primary btn-sm">{{ t('roadmap.load_path') }}</button>
+  </form>
+</div>
+
+{% if selected_career %}
+  {% set selected_career_title = t_career_field(selected_career.slug, 'title', selected_career.title) %}
+  <!-- Roadmap Summary & Personal Goal -->
+  <section class="grid-2" style="margin-bottom: 24px;">
+    <div class="surface-card career-card career-theme--{{ selected_career.slug }}">
+      <div class="card-header">
+        <div style="display: flex; align-items: center; gap: 12px;">
+          <span class="career-emblem">{{ career_icon(selected_career.slug) }}</span>
+          <div>
+            <h2 class="card-title">{{ t('roadmap.progress_title', title=selected_career_title) }}</h2>
+            <div class="meta-line">
+              <span id="roadmap-completed-count" class="tabular-nums">{{ t('roadmap.tasks_ratio', done=stats.completed, total=stats.total) }}</span>
+              <span aria-hidden="true">&middot;</span>
+              <span id="roadmap-hours-count" class="tabular-nums">{{ t('roadmap.hours_ratio', done=stats.completed_hours, total=stats.total_hours) }}</span>
+            </div>
+          </div>
+        </div>
+        <span id="roadmap-progress-text" class="font-mono career-ink-text" style="font-size: 1.35rem; font-weight: 700;">
+          {{ stats.percent }}%
+        </span>
+      </div>
+      <div class="progress-track">
+        <div id="roadmap-progress-bar" class="progress-fill career-progress-fill" style="width: {{ stats.percent }}%;"></div>
+      </div>
+      <p style="margin-top: 12px; font-size: 0.875rem; color: var(--text-secondary);">
+        {{ t_career_field(selected_career.slug, 'tagline', selected_career.tagline) }}
+      </p>
+    </div>
+
+    <div class="surface-card">
+      <div class="card-header">
+        <h2 class="card-title">{{ t('roadmap.goal_card') }}</h2>
+      </div>
+      <form action="{{ url_for('roadmap.update_goal') }}" method="POST" class="stack-sm">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+        <input type="hidden" name="career_path_id" value="{{ selected_career.id }}" />
+        <div class="form-grid">
+          <div class="form-group">
+            <label for="goal-text" class="form-label">{{ t('roadmap.target_milestone') }}</label>
+            <input
+              id="goal-text"
+              name="personal_goal"
+              type="text"
+              class="form-control"
+              required
+              minlength="3"
+              maxlength="250"
+              value="{{ t_goal(career_goal.personal_goal) if career_goal else '' }}"
+              placeholder="{{ t('roadmap.goal_placeholder') }}"
+            />
+          </div>
+          <div class="form-group">
+            <label for="goal-date" class="form-label">{{ t('roadmap.target_date_label') }}</label>
+            <input
+              id="goal-date"
+              name="target_date"
+              type="date"
+              class="form-control"
+              value="{{ career_goal.target_date if career_goal and career_goal.target_date else '' }}"
+            />
+          </div>
+        </div>
+        <div>
+          <button type="submit" class="btn btn-secondary btn-sm">{{ t('roadmap.save_goal') }}</button>
+        </div>
+      </form>
+    </div>
+  </section>
+
+  <!-- Main Roadmap Workspace: Tasks + Add Task / Skill Mastery -->
+  <section class="grid-dashboard-main">
+    <div class="stack-lg">
+      <!-- Task List -->
+      <div class="surface-card-flush">
+        <div style="padding: 18px 20px; border-bottom: 1px solid var(--border-hairline); display: flex; flex-wrap: wrap; justify-content: space-between; gap: 12px; align-items: center;">
+          <h2 class="card-title">{{ t('roadmap.tasks_heading') }}</h2>
+
+          <div class="segmented-bar" role="navigation" aria-label="{{ t('roadmap.filters_aria') }}">
+            <a href="{{ url_for('roadmap.index', career_id=selected_career.id, status='all', level=level_filter) }}"
+               class="segmented-btn {% if status_filter == 'all' %}active{% endif %}">{{ t('common.all') }}</a>
+            <a href="{{ url_for('roadmap.index', career_id=selected_career.id, status='pending', level=level_filter) }}"
+               class="segmented-btn {% if status_filter == 'pending' %}active{% endif %}">{{ t('roadmap.filter_pending') }}</a>
+            <a href="{{ url_for('roadmap.index', career_id=selected_career.id, status='completed', level=level_filter) }}"
+               class="segmented-btn {% if status_filter == 'completed' %}active{% endif %}">{{ t('roadmap.filter_completed') }}</a>
+          </div>
+        </div>
+
+        <div style="padding: 10px 20px; background: var(--bg-canvas); border-bottom: 1px solid var(--border-hairline); display: flex; flex-wrap: wrap; gap: 8px;">
+          <a href="{{ url_for('roadmap.index', career_id=selected_career.id, status=status_filter) }}"
+             class="btn btn-sm {% if not level_filter %}btn-primary{% else %}btn-ghost{% endif %}">{{ t('roadmap.all_levels') }}</a>
+          {% for lvl in ['Beginner', 'Intermediate', 'Advanced'] %}
+            <a href="{{ url_for('roadmap.index', career_id=selected_career.id, status=status_filter, level=lvl) }}"
+               class="btn btn-sm {% if level_filter == lvl %}btn-primary{% else %}btn-ghost{% endif %}">{{ t_enum('level', lvl) }}</a>
+          {% endfor %}
+        </div>
+
+        {% if tasks %}
+          <div>
+            {% for task in tasks %}
+              {% set localized_task_title = t_task_title(task.title) %}
+              {% set localized_task_desc = t_task_desc(task.description or '', task.skill_name, task.skill_eng_desc) %}
+              <div class="task-item {% if task.is_completed %}completed{% endif %}">
+                <div style="display: flex; align-items: flex-start; gap: 12px; min-width: 0; flex: 1;">
+                  <form action="{{ url_for('roadmap.toggle_task', task_id=task.id) }}" method="POST">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+                    <button
+                      type="submit"
+                      class="task-toggle-btn {% if task.is_completed %}checked{% endif %}"
+                      data-ajax-task-toggle="{{ task.id }}"
+                      aria-label="{{ t('roadmap.toggle_aria', title=localized_task_title) }}"
+                      aria-pressed="{{ 'true' if task.is_completed else 'false' }}"
+                    >
+                      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3">
+                        <polyline points="20 6 9 17 4 12" />
+                      </svg>
+                    </button>
+                  </form>
+
+                  <div style="min-width: 0; flex: 1;">
+                    <div class="task-title" style="font-weight: 600;">{{ localized_task_title }}</div>
+                    {% if localized_task_desc %}
+                      <p style="margin-top: 2px; font-size: 0.84375rem; color: var(--text-secondary);">{{ localized_task_desc }}</p>
+                    {% endif %}
+                    <div class="meta-line" style="margin-top: 6px;">
+                      <span class="level-text--{{ task.level }}">{{ t_enum('level', task.level) }}</span>
+                      {% if task.skill_name %}
+                        <span aria-hidden="true">&middot;</span>
+                        <span>{{ t_skill_name(task.skill_name) }}</span>
+                      {% endif %}
+                      <span aria-hidden="true">&middot;</span>
+                      <span class="tabular-nums">{{ task.estimated_hours }}{{ t('common.hours_unit') }}</span>
+                      {% if task.due_date %}
+                        <span aria-hidden="true">&middot;</span>
+                        <span class="tabular-nums">{{ t('roadmap.due_prefix', date=task.due_date) }}</span>
+                      {% endif %}
+                    </div>
+                  </div>
+                </div>
+
+                <div style="display: flex; align-items: center; gap: 6px;">
+                  <button
+                    type="button"
+                    class="btn btn-secondary btn-sm"
+                    data-edit-task
+                    data-id="{{ task.id }}"
+                    data-title="{{ localized_task_title }}"
+                    data-level="{{ task.level }}"
+                    data-skill-id="{{ task.skill_id or '' }}"
+                    data-hours="{{ task.estimated_hours }}"
+                    data-due="{{ task.due_date or '' }}"
+                    data-desc="{{ localized_task_desc }}"
+                  >
+                    {{ t('common.edit') }}
+                  </button>
+                  <form
+                    action="{{ url_for('roadmap.delete_task', task_id=task.id) }}"
+                    method="POST"
+                    data-confirm="{{ t('roadmap.confirm_remove', title=localized_task_title) }}"
+                  >
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+                    <button type="submit" class="btn btn-ghost btn-sm" style="color: var(--status-danger);">{{ t('common.remove') }}</button>
+                  </form>
+                </div>
+              </div>
+            {% endfor %}
+          </div>
+        {% else %}
+          <div class="empty-state">
+            <div class="empty-state-title">{{ t('roadmap.no_tasks_title') }}</div>
+            <p class="empty-state-desc">{{ t('roadmap.no_tasks_desc') }}</p>
+          </div>
+        {% endif %}
+      </div>
+    </div>
+
+    <!-- Sidebar Column: Add Task & Skill Mastery -->
+    <div class="stack-lg">
+      <div class="surface-card">
+        <div class="card-header">
+          <h2 class="card-title">{{ t('roadmap.add_task_card') }}</h2>
+        </div>
+        <form action="{{ url_for('roadmap.add_task') }}" method="POST" class="stack-md">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+          <input type="hidden" name="career_path_id" value="{{ selected_career.id }}" />
+
+          <div class="form-group">
+            <label for="task-title" class="form-label">{{ t('roadmap.task_title') }}</label>
+            <input id="task-title" name="title" type="text" class="form-control" required minlength="2" maxlength="140" placeholder="{{ t('roadmap.task_placeholder') }}" />
+          </div>
+
+          <div class="form-grid">
+            <div class="form-group">
+              <label for="task-skill" class="form-label">{{ t('roadmap.related_skill') }}</label>
+              <select id="task-skill" name="skill_id" class="form-control">
+                <option value="">{{ t('roadmap.general_milestone') }}</option>
+                {% for sk in skills_progress %}
+                  <option value="{{ sk.id }}">{{ t_skill_name(sk.name) }}</option>
+                {% endfor %}
+              </select>
+            </div>
+
+            <div class="form-group">
+              <label for="task-level" class="form-label">{{ t('roadmap.level') }}</label>
+              <select id="task-level" name="level" class="form-control">
+                <option value="Beginner">{{ t_enum('level', 'Beginner') }}</option>
+                <option value="Intermediate">{{ t_enum('level', 'Intermediate') }}</option>
+                <option value="Advanced">{{ t_enum('level', 'Advanced') }}</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="form-grid">
+            <div class="form-group">
+              <label for="task-hours" class="form-label">{{ t('roadmap.est_hours') }}</label>
+              <input id="task-hours" name="estimated_hours" type="number" min="0.5" max="200" step="0.5" value="2.0" class="form-control" />
+            </div>
+
+            <div class="form-group">
+              <label for="task-due" class="form-label">{{ t('roadmap.due_date') }}</label>
+              <input id="task-due" name="due_date" type="date" class="form-control" />
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label for="task-desc" class="form-label">{{ t('roadmap.notes_opt') }}</label>
+            <textarea id="task-desc" name="description" class="form-control" placeholder="{{ t('roadmap.notes_placeholder') }}"></textarea>
+          </div>
+
+          <button type="submit" class="btn btn-primary">{{ t('roadmap.add_btn') }}</button>
+        </form>
+      </div>
+
+      <div class="surface-card">
+        <div class="card-header">
+          <h2 class="card-title">{{ t('roadmap.skill_tracker') }}</h2>
+        </div>
+        <div class="stack-md">
+          {% for sk in skills_progress %}
+            {% set localized_sk_name = t_skill_name(sk.name) %}
+            <div data-skill-card="{{ sk.id }}" style="padding-bottom: 12px; border-bottom: 1px solid var(--border-hairline);">
+              <div style="display: flex; justify-content: space-between; align-items: baseline; gap: 8px; margin-bottom: 6px;">
+                <div>
+                  <strong style="font-size: 0.9rem;">{{ localized_sk_name }}</strong>
+                  <div class="meta-line">
+                    <span class="level-text--{{ sk.level }}">{{ t_enum('level', sk.level) }}</span>
+                    <span aria-hidden="true">&middot;</span>
+                    <span data-skill-hours class="tabular-nums">{{ t('roadmap.hours_logged_short', hours=sk.hours_logged) }}</span>
+                  </div>
+                </div>
+                <span data-skill-pct class="font-mono" style="font-weight: 700; color: var(--accent-purple);">{{ sk.mastery_percent }}%</span>
+              </div>
+              <div class="progress-track" style="margin-bottom: 8px;">
+                {% set bar_variant = 'turquoise' if sk.level == 'Beginner' else ('violet' if sk.level == 'Intermediate' else 'coral') %}
+                <div data-skill-bar class="progress-fill {{ bar_variant }}" style="width: {{ sk.mastery_percent }}%;"></div>
+              </div>
+              <form action="{{ url_for('roadmap.update_skill_progress', skill_id=sk.id) }}" method="POST" style="display: flex; gap: 8px; align-items: center;">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+                <input
+                  type="number"
+                  name="mastery_percent"
+                  min="0"
+                  max="100"
+                  value="{{ sk.mastery_percent }}"
+                  class="form-control"
+                  style="width: 82px; min-height: 34px; padding: 4px 8px;"
+                  aria-label="{{ t('roadmap.mastery_aria', name=localized_sk_name) }}"
+                />
+                <input
+                  type="number"
+                  name="hours_logged"
+                  min="0"
+                  max="500"
+                  step="0.5"
+                  value="{{ sk.hours_logged }}"
+                  class="form-control"
+                  style="width: 84px; min-height: 34px; padding: 4px 8px;"
+                  aria-label="{{ t('roadmap.hours_aria', name=localized_sk_name) }}"
+                />
+                <button type="submit" class="btn btn-secondary btn-sm">{{ t('common.update') }}</button>
+              </form>
+            </div>
+          {% endfor %}
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Edit Task Modal -->
+  <div class="modal-overlay" id="edit-task-modal" role="dialog" aria-modal="true" aria-labelledby="edit-task-heading">
+    <div class="modal-dialog" style="max-width: 540px;">
+      <div class="card-header">
+        <h2 id="edit-task-heading" class="card-title">{{ t('roadmap.edit_modal_title') }}</h2>
+        <button type="button" class="alert-dismiss" data-close-modal aria-label="{{ t('common.close_modal') }}">&times;</button>
+      </div>
+      <form id="edit-task-form" method="POST" class="stack-md">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+        <div class="form-group">
+          <label for="edit-task-title" class="form-label">{{ t('roadmap.task_title') }}</label>
+          <input id="edit-task-title" name="title" type="text" class="form-control" required minlength="2" maxlength="140" />
+        </div>
+        <div class="form-grid">
+          <div class="form-group">
+            <label for="edit-task-skill" class="form-label">{{ t('roadmap.related_skill') }}</label>
+            <select id="edit-task-skill" name="skill_id" class="form-control">
+              <option value="">{{ t('roadmap.general_milestone') }}</option>
+              {% for sk in skills_progress %}
+                <option value="{{ sk.id }}">{{ t_skill_name(sk.name) }}</option>
+              {% endfor %}
+            </select>
+          </div>
+          <div class="form-group">
+            <label for="edit-task-level" class="form-label">{{ t('roadmap.level') }}</label>
+            <select id="edit-task-level" name="level" class="form-control">
+              <option value="Beginner">{{ t_enum('level', 'Beginner') }}</option>
+              <option value="Intermediate">{{ t_enum('level', 'Intermediate') }}</option>
+              <option value="Advanced">{{ t_enum('level', 'Advanced') }}</option>
+            </select>
+          </div>
+        </div>
+        <div class="form-grid">
+          <div class="form-group">
+            <label for="edit-task-hours" class="form-label">{{ t('roadmap.est_hours') }}</label>
+            <input id="edit-task-hours" name="estimated_hours" type="number" min="0.5" max="200" step="0.5" class="form-control" />
+          </div>
+          <div class="form-group">
+            <label for="edit-task-due" class="form-label">{{ t('roadmap.due_date') }}</label>
+            <input id="edit-task-due" name="due_date" type="date" class="form-control" />
+          </div>
+        </div>
+        <div class="form-group">
+          <label for="edit-task-desc" class="form-label">{{ t('roadmap.notes_opt') }}</label>
+          <textarea id="edit-task-desc" name="description" class="form-control"></textarea>
+        </div>
+        <div style="display: flex; justify-content: flex-end; gap: 10px;">
+          <button type="button" class="btn btn-secondary btn-sm" data-close-modal>{{ t('common.cancel') }}</button>
+          <button type="submit" class="btn btn-primary btn-sm">{{ t('common.save_changes') }}</button>
+        </div>
+      </form>
+    </div>
+  </div>
+{% else %}
+  <div class="surface-card empty-state">
+    <div class="empty-state-title">{{ t('roadmap.empty_title') }}</div>
+    <p class="empty-state-desc">{{ t('roadmap.empty_desc') }}</p>
+    <a href="{{ url_for('careers.index') }}" class="btn btn-primary btn-sm">{{ t('roadmap.open_explorer') }}</a>
+  </div>
+{% endif %}
+{% endblock %}

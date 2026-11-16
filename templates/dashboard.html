@@ -1,0 +1,303 @@
+{% extends "base.html" %}
+{% from "_macros.html" import career_icon %}
+{% block title %}{{ t('dash.title') }}{% endblock %}
+{% block page_breadcrumb %}{{ t('bc.dashboard') }}{% endblock %}
+
+{% block topbar_action %}
+  <a href="{{ url_for('roadmap.index') }}" class="btn btn-sm btn-primary">{{ t('dash.open_roadmap') }}</a>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <div>
+    <h1 class="page-title">{{ t('dash.welcome', name=current_user.full_name) }}</h1>
+    <p class="page-subtitle">
+      {% if current_user.target_career_title %}
+        {{ t('dash.primary_track') }}
+        <strong style="color: var(--accent-purple);">{{ t_career_field(current_user.target_career_slug, 'title', current_user.target_career_title) }}</strong>
+        &middot;
+        {{ t('dash.weekly_goal_meta', hours="%.1f"|format(current_user.weekly_goal_hours)) }}
+      {% else %}
+        {{ t('dash.no_primary_track') }}
+      {% endif %}
+    </p>
+  </div>
+</div>
+
+<!-- KPI Summary Strip -->
+<section class="grid-4" style="margin-bottom: 24px;" aria-label="{{ t('dash.kpi_aria') }}">
+  <div class="kpi-card kpi-purple">
+    <div class="kpi-head">
+      <span class="kpi-label">{{ t('dash.kpi_overall') }}</span>
+      <span class="kpi-icon" aria-hidden="true">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+      </span>
+    </div>
+    <span class="kpi-value">{{ data.overall_progress }}%</span>
+    <div class="progress-track" style="margin-top: 4px;">
+      <div class="progress-fill violet" style="width: {{ data.overall_progress }}%;"></div>
+    </div>
+  </div>
+
+  <div class="kpi-card kpi-blue">
+    <div class="kpi-head">
+      <span class="kpi-label">{{ t('dash.kpi_completed_tasks') }}</span>
+      <span class="kpi-icon" aria-hidden="true">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
+      </span>
+    </div>
+    <span class="kpi-value">{{ data.completed_tasks }} / {{ data.total_tasks }}</span>
+    <span class="kpi-detail">{{ t('dash.kpi_enrolled_sub') }}</span>
+  </div>
+
+  <div class="kpi-card kpi-turquoise">
+    <div class="kpi-head">
+      <span class="kpi-label">{{ t('dash.kpi_active_paths') }}</span>
+      <span class="kpi-icon" aria-hidden="true">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polygon points="16.24 7.76 14.12 14.12 7.76 16.24 9.88 9.88 16.24 7.76"/></svg>
+      </span>
+    </div>
+    <span class="kpi-value">{{ data.active_paths_count }}</span>
+    <span class="kpi-detail">{{ t('dash.kpi_projects_sub', count=data.stats.total_projects) }}</span>
+  </div>
+
+  <div class="kpi-card kpi-coral">
+    <div class="kpi-head">
+      <span class="kpi-label">{{ t('dash.kpi_weekly_activity') }}</span>
+      <span class="kpi-icon" aria-hidden="true">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+      </span>
+    </div>
+    <span class="kpi-value">{{ data.weekly_activity.total_week_hours }}{{ t('common.hours_unit') }}</span>
+    <span class="kpi-detail">{{ t('dash.kpi_weekly_goal_sub', pct=data.weekly_activity.weekly_goal_pct, goal=data.weekly_activity.weekly_goal_hours) }}</span>
+  </div>
+</section>
+
+<!-- Interactive Charts Row -->
+<section class="grid-2" style="margin-bottom: 24px;">
+  <div class="surface-card">
+    <div class="card-header">
+      <div>
+        <h2 class="card-title">{{ t('dash.chart_weekly_title') }}</h2>
+        <div class="meta-line">
+          <span>{{ t('dash.last_7_days') }}</span>
+          <span aria-hidden="true">&middot;</span>
+          <span class="tabular-nums">{{ t('dash.hrs_logged_meta', hours=data.weekly_activity.total_week_hours) }}</span>
+        </div>
+      </div>
+    </div>
+    <div class="chart-box">
+      <canvas id="weeklyActivityChart" aria-label="{{ t('dash.chart_weekly_aria') }}"></canvas>
+    </div>
+  </div>
+
+  <div class="surface-card">
+    <div class="card-header">
+      <div>
+        <h2 class="card-title">{{ t('dash.chart_skills_title') }}</h2>
+        <div class="meta-line">
+          <span>{{ t('dash.chart_skills_sub') }}</span>
+        </div>
+      </div>
+      <a href="{{ url_for('hub.assessments_index') }}" class="btn btn-ghost btn-sm">{{ t('dash.assess_skills') }}</a>
+    </div>
+    {% if data.skills_chart.labels %}
+      <div class="chart-box">
+        <canvas id="skillsProgressChart" aria-label="{{ t('dash.chart_skills_aria') }}"></canvas>
+      </div>
+    {% else %}
+      <div class="empty-state">
+        <div class="empty-state-title">{{ t('dash.no_skills_title') }}</div>
+        <p class="empty-state-desc">{{ t('dash.no_skills_desc') }}</p>
+        <a href="{{ url_for('careers.index') }}" class="btn btn-primary btn-sm">{{ t('nav.explore_careers') }}</a>
+      </div>
+    {% endif %}
+  </div>
+</section>
+
+<!-- Active Learning Paths & Learning Statistics -->
+<section class="grid-dashboard-main" style="margin-bottom: 24px;">
+  <div class="surface-card">
+    <div class="card-header">
+      <h2 class="card-title">{{ t('dash.active_paths_heading') }}</h2>
+      <a href="{{ url_for('careers.index') }}" class="btn btn-secondary btn-sm">{{ t('dash.add_path') }}</a>
+    </div>
+
+    {% if data.active_paths %}
+      <div class="stack-md">
+        {% for path in data.active_paths %}
+          <div class="career-theme--{{ path.slug }}" style="padding-bottom: 14px; border-bottom: 1px solid var(--border-hairline);">
+            <div style="display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 8px;">
+              <div style="display: flex; align-items: center; gap: 10px; min-width: 0;">
+                <span class="career-emblem" style="width: 34px; height: 34px;">{{ career_icon(path.slug, 16) }}</span>
+                <div style="min-width: 0;">
+                  <a href="{{ url_for('roadmap.index', career_id=path.id) }}" class="career-ink-text" style="font-weight: 600;">
+                    {{ t_career_field(path.slug, 'title', path.title) }}
+                  </a>
+                  <div class="meta-line">
+                    <span class="tabular-nums">{{ t('dash.tasks_of', done=path.completed_tasks, total=path.total_tasks) }}</span>
+                    {% if path.target_date %}
+                      <span aria-hidden="true">&middot;</span>
+                      <span class="tabular-nums">{{ t('dash.target_date', date=path.target_date) }}</span>
+                    {% endif %}
+                  </div>
+                </div>
+              </div>
+              <span class="font-mono career-ink-text" style="font-weight: 700; font-size: 0.95rem;">{{ path.progress_percent }}%</span>
+            </div>
+            <div class="progress-track">
+              <div class="progress-fill career-progress-fill" style="width: {{ path.progress_percent }}%;"></div>
+            </div>
+            {% if path.personal_goal %}
+              <p style="margin-top: 6px; font-size: 0.8125rem; color: var(--text-secondary);">{{ t('dash.goal_prefix', goal=t_goal(path.personal_goal)) }}</p>
+            {% endif %}
+          </div>
+        {% endfor %}
+      </div>
+    {% else %}
+      <div class="empty-state">
+        <div class="empty-state-title">{{ t('dash.no_paths_title') }}</div>
+        <p class="empty-state-desc">{{ t('dash.no_paths_desc') }}</p>
+        <a href="{{ url_for('careers.index') }}" class="btn btn-primary btn-sm">{{ t('landing.cta_browse') }}</a>
+      </div>
+    {% endif %}
+  </div>
+
+  <div class="surface-card">
+    <div class="card-header">
+      <h2 class="card-title">{{ t('dash.learning_stats') }}</h2>
+    </div>
+    <div class="stack-sm">
+      <div class="list-row">
+        <span style="color: var(--text-secondary);">{{ t('dash.stat_total_hours') }}</span>
+        <span class="font-mono" style="font-weight: 600;">{{ data.stats.total_hours }} {{ t('common.hours_short') }}</span>
+      </div>
+      <div class="list-row">
+        <span style="color: var(--text-secondary);">{{ t('dash.stat_resources_completed') }}</span>
+        <span class="font-mono" style="font-weight: 600;">{{ data.stats.completed_resources }} / {{ data.stats.total_resources }}</span>
+      </div>
+      <div class="list-row">
+        <span style="color: var(--text-secondary);">{{ t('dash.stat_projects_completed') }}</span>
+        <span class="font-mono" style="font-weight: 600;">{{ data.stats.completed_projects }} / {{ data.stats.total_projects }}</span>
+      </div>
+      <div class="list-row">
+        <span style="color: var(--text-secondary);">{{ t('dash.stat_avg_project') }}</span>
+        <span class="font-mono" style="font-weight: 600;">{{ data.stats.avg_project_completion }}%</span>
+      </div>
+      <div class="list-row">
+        <span style="color: var(--text-secondary);">{{ t('dash.stat_avg_assessment') }}</span>
+        <span class="font-mono" style="font-weight: 600;">
+          {% if data.stats.total_assessments > 0 %}{{ data.stats.avg_assessment_score }}%{% else %}&mdash;{% endif %}
+        </span>
+      </div>
+      <div class="list-row">
+        <span style="color: var(--text-secondary);">{{ t('dash.stat_study_notes') }}</span>
+        <span class="font-mono" style="font-weight: 600;">{{ data.stats.total_notes }}</span>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- Bottom Row: Weak Skills / Upcoming Tasks + Recent Activity -->
+<section class="grid-2">
+  <div class="surface-card">
+    <div class="card-header">
+      <h2 class="card-title">{{ t('dash.next_milestones') }}</h2>
+      <a href="{{ url_for('roadmap.index') }}" class="btn btn-ghost btn-sm">{{ t('dash.view_all_tasks') }}</a>
+    </div>
+
+    {% if data.weak_skills %}
+      <div style="margin-bottom: 16px; padding-bottom: 14px; border-bottom: 1px solid var(--border-hairline);">
+        <div style="font-size: 0.8125rem; font-weight: 600; color: var(--status-warning); margin-bottom: 8px;">
+          {{ t('dash.weak_skills_banner') }}
+        </div>
+        <div class="stack-sm">
+          {% for item in data.weak_skills %}
+            <div style="display: flex; align-items: center; justify-content: space-between; gap: 12px; font-size: 0.875rem;">
+              <div>
+                <strong>{{ t_skill_name(item.skill_name) if item.skill_name else t_assessment_title(item.title) }}</strong>
+                <span style="color: var(--text-muted);"> &middot; {{ t_career_field(item.career_slug, 'title', item.career_title) }}</span>
+              </div>
+              <a href="{{ url_for('hub.take_quiz', slug=item.career_slug) }}" class="font-mono" style="color: var(--status-warning); font-weight: 600;">
+                {{ item.score }}% {{ t('common.arrow_forward') }}
+              </a>
+            </div>
+          {% endfor %}
+        </div>
+      </div>
+    {% endif %}
+
+    {% if data.upcoming_tasks %}
+      <div class="stack-sm">
+        {% for task in data.upcoming_tasks %}
+          <div class="list-row career-theme--{{ task.career_slug }}">
+            <div>
+              <div style="font-weight: 500;">{{ t_task_title(task.title) }}</div>
+              <div class="meta-line">
+                <span class="career-dot"></span>
+                <span class="career-ink-text">{{ t_career_field(task.career_slug, 'title', task.career_title) }}</span>
+                <span aria-hidden="true">&middot;</span>
+                <span class="level-text--{{ task.level }}">{{ t_enum('level', task.level) }}</span>
+                <span aria-hidden="true">&middot;</span>
+                <span class="tabular-nums">{{ task.estimated_hours }}{{ t('common.hours_unit') }}</span>
+              </div>
+            </div>
+            <form action="{{ url_for('roadmap.toggle_task', task_id=task.id) }}" method="POST">
+              <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+              <input type="hidden" name="next" value="{{ url_for('main.dashboard') }}" />
+              <button type="submit" class="btn btn-secondary btn-sm">{{ t('dash.complete_btn') }}</button>
+            </form>
+          </div>
+        {% endfor %}
+      </div>
+    {% else %}
+      <div class="empty-state">
+        <div class="empty-state-title">{{ t('dash.no_tasks_title') }}</div>
+        <p class="empty-state-desc">{{ t('dash.no_tasks_desc') }}</p>
+      </div>
+    {% endif %}
+  </div>
+
+  <div class="surface-card">
+    <div class="card-header">
+      <h2 class="card-title">{{ t('dash.recent_activities') }}</h2>
+    </div>
+    {% if data.recent_activities %}
+      <div class="stack-sm">
+        {% for act in data.recent_activities %}
+          <div class="list-row {% if act.career_slug %}career-theme--{{ act.career_slug }}{% endif %}">
+            <div>
+              <div style="font-size: 0.875rem; font-weight: 500; color: var(--text-primary);">{{ t_activity_desc(act.description) }}</div>
+              <div class="meta-line">
+                {% if act.career_title %}
+                  <span class="career-dot"></span>
+                  <span class="career-ink-text">{{ t_career_field(act.career_slug, 'title', act.career_title) }}</span>
+                  <span aria-hidden="true">&middot;</span>
+                {% endif %}
+                <span class="tabular-nums">{{ act.created_at|format_datetime }}</span>
+              </div>
+            </div>
+            {% if act.hours_spent > 0 %}
+              <span class="font-mono" style="font-size: 0.8125rem; color: var(--accent-purple); font-weight: 600; white-space: nowrap;">
+                +{{ act.hours_spent }}{{ t('common.hours_unit') }}
+              </span>
+            {% endif %}
+          </div>
+        {% endfor %}
+      </div>
+    {% else %}
+      <div class="empty-state">
+        <div class="empty-state-title">{{ t('dash.no_activity_title') }}</div>
+        <p class="empty-state-desc">{{ t('dash.no_activity_desc') }}</p>
+      </div>
+    {% endif %}
+  </div>
+</section>
+
+<script id="weekly-activity-data" type="application/json">{{ data.weekly_activity | tojson }}</script>
+<script id="skills-progress-data" type="application/json">{{ data.skills_chart | tojson }}</script>
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/charts.js') }}"></script>
+{% endblock %}

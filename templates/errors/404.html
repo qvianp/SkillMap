@@ -1,0 +1,20 @@
+{% extends "base.html" %}
+{% block title %}{{ title or t('err.not_found_short') }}{% endblock %}
+
+{% block content %}
+<div class="surface-card empty-state" style="max-width: 540px; margin: 40px auto;">
+  <div class="font-mono" style="font-size: 2rem; font-weight: 700; color: var(--accent-indigo);">{{ code or 404 }}</div>
+  <h1 class="empty-state-title" style="font-size: 1.25rem;">{{ title or t('err.404_title') }}</h1>
+  <p class="empty-state-desc">{{ message or t('err.404_fallback') }}</p>
+  <a href="{{ url_for('main.dashboard') }}" class="btn btn-primary btn-sm">{{ t('err.return_dashboard') }}</a>
+</div>
+{% endblock %}
+
+{% block public_content %}
+<div class="surface-card empty-state" style="max-width: 540px; margin: 40px auto;">
+  <div class="font-mono" style="font-size: 2rem; font-weight: 700; color: var(--accent-indigo);">{{ code or 404 }}</div>
+  <h1 class="empty-state-title" style="font-size: 1.25rem;">{{ title or t('err.404_title') }}</h1>
+  <p class="empty-state-desc">{{ message or t('err.404_fallback') }}</p>
+  <a href="{{ url_for('main.index') }}" class="btn btn-primary btn-sm">{{ t('err.return_home') }}</a>
+</div>
+{% endblock %}

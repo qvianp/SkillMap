@@ -1,0 +1,96 @@
+{% extends "base.html" %}
+{% from "_macros.html" import career_icon %}
+{% block title %}{{ t('landing.title') }}{% endblock %}
+
+{% block public_content %}
+<section class="hero-split">
+  <div style="display: flex; flex-direction: column; justify-content: center;">
+    <p class="meta-line" style="margin-bottom: 12px;">
+      <span style="color: #6d28d9; font-weight: 600;">{{ t('landing.kicker_1') }}</span>
+      <span aria-hidden="true">&middot;</span>
+      <span style="color: #0891b2; font-weight: 600;">{{ t('landing.kicker_2') }}</span>
+      <span aria-hidden="true">&middot;</span>
+      <span style="color: #db2777; font-weight: 600;">{{ t('landing.kicker_3') }}</span>
+    </p>
+    <h1 class="hero-headline">
+      {{ t('landing.headline_prefix') }} <span class="hero-gradient-text">{{ t('landing.headline_accent') }}</span>
+    </h1>
+    <p class="hero-lead">{{ t('landing.lead') }}</p>
+
+    <div class="hero-actions">
+      <a href="{{ url_for('auth.register') }}" class="btn btn-primary">{{ t('landing.cta_start') }}</a>
+      <form action="{{ url_for('auth.demo_login') }}" method="POST" style="display: inline;">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+        <button type="submit" class="btn btn-secondary">{{ t('landing.cta_demo') }}</button>
+      </form>
+      <a href="{{ url_for('careers.index') }}" class="btn btn-ghost">{{ t('landing.cta_browse') }}</a>
+    </div>
+  </div>
+
+  <div class="hero-preview-panel">
+    <div>
+      <div style="font-size: 0.8125rem; color: #c4b5fd; font-weight: 500; margin-bottom: 6px;">{{ t('landing.panel_kicker') }}</div>
+      <h2 style="color: #ffffff; font-size: 1.25rem;">{{ t('landing.panel_title') }}</h2>
+    </div>
+
+    <div class="stack-sm" style="border-top: 1px solid rgba(255,255,255,0.12); padding-top: 16px;">
+      <div class="hero-module-row">
+        <span style="color: #f1f5f9;">{{ t('landing.mod_1_label') }}</span>
+        <span class="font-mono" style="color: #c4b5fd;">{{ t('landing.mod_1_val') }}</span>
+      </div>
+      <div class="hero-module-row">
+        <span style="color: #f1f5f9;">{{ t('landing.mod_2_label') }}</span>
+        <span class="font-mono" style="color: #67e8f9;">{{ t('landing.mod_2_val') }}</span>
+      </div>
+      <div class="hero-module-row">
+        <span style="color: #f1f5f9;">{{ t('landing.mod_3_label') }}</span>
+        <span class="font-mono" style="color: #f9a8d4;">{{ t('landing.mod_3_val') }}</span>
+      </div>
+      <div class="hero-module-row">
+        <span style="color: #f1f5f9;">{{ t('landing.mod_4_label') }}</span>
+        <span class="font-mono" style="color: #fda4af;">{{ t('landing.mod_4_val') }}</span>
+      </div>
+    </div>
+
+    <div style="border-top: 1px solid rgba(255,255,255,0.12); padding-top: 14px; font-size: 0.8125rem; color: #cbd5e1;">
+      {{ t('landing.panel_footer') }}
+    </div>
+  </div>
+</section>
+
+<section style="margin-top: 32px;">
+  <div class="page-header">
+    <div>
+      <h2 style="font-size: 1.375rem;">{{ t('landing.explore_heading') }}</h2>
+      <p class="page-subtitle">{{ t('landing.explore_sub') }}</p>
+    </div>
+    <a href="{{ url_for('careers.index') }}" class="btn btn-secondary btn-sm">{{ t('landing.view_all_paths') }}</a>
+  </div>
+
+  <div class="grid-3">
+    {% for career in careers %}
+      <article class="surface-card career-card career-theme--{{ career.slug }}" style="display: flex; flex-direction: column; justify-content: space-between; gap: 16px;">
+        <div>
+          <div style="display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 12px;">
+            <span class="career-emblem">{{ career_icon(career.slug) }}</span>
+            <div class="meta-line">
+              <span class="tabular-nums">{{ t('common.skills_count', count=career.skill_count) }}</span>
+              <span aria-hidden="true">&middot;</span>
+              <span class="tabular-nums">{{ career.estimated_hours }} {{ t('common.hours_short') }}</span>
+              <span aria-hidden="true">&middot;</span>
+              <span class="tabular-nums">{{ career.estimated_months }} {{ t('common.months_short') }}</span>
+            </div>
+          </div>
+          <h3 style="font-size: 1.0625rem;">{{ t_career_field(career.slug, 'title', career.title) }}</h3>
+          <p style="margin-top: 6px; font-size: 0.875rem; color: var(--text-secondary);">
+            {{ t_career_field(career.slug, 'tagline', career.tagline) }}
+          </p>
+        </div>
+        <div>
+          <a href="{{ url_for('careers.detail', slug=career.slug) }}" class="btn btn-secondary btn-sm">{{ t('landing.inspect_curriculum') }}</a>
+        </div>
+      </article>
+    {% endfor %}
+  </div>
+</section>
+{% endblock %}
